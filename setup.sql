@@ -35,3 +35,14 @@ alter table foods disable row level security;
 alter table entries disable row level security;
 
 create index if not exists entries_entry_date_idx on entries(entry_date);
+
+-- 每日指标表：一天一行，记录体重与总消耗（均可空）
+create table if not exists daily_metrics (
+  entry_date date primary key,
+  weight_kg numeric,
+  burn_kcal numeric,
+  updated_at timestamptz not null default now()
+);
+
+-- 单人使用：关闭行级安全（anon key 即访问凭证，请勿泄露）
+alter table daily_metrics disable row level security;

@@ -43,3 +43,17 @@ export interface DayTotals {
   fat: number
   carbs: number
 }
+
+/** 每日指标：一天一行，体重与总消耗均可空 */
+export interface DailyMetric {
+  entry_date: string
+  weight_kg: number | null
+  burn_kcal: number | null
+  updated_at?: string
+}
+
+/** 保存每日指标时的输入（未填的字段传 null） */
+export interface MetricInput {
+  weight_kg: number | null
+  burn_kcal: number | null
+}

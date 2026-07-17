@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Scale } from 'lucide-react'
 import AddEntrySheet from '@/components/AddEntrySheet'
 import BottomSheet from '@/components/BottomSheet'
 import EntryRow from '@/components/EntryRow'
+import MetricsSheet from '@/components/MetricsSheet'
 import QuantitySheet from '@/components/QuantitySheet'
 import { useEntries } from '@/hooks/useEntries'
+import { useMetrics } from '@/hooks/useMetrics'
 import { useToast } from '@/lib/toast'
 import { addDays, formatDisplay, isToday, todayKey, weekdayLabel } from '@/lib/date'
 import { fmtKcal, fmtMacro } from '@/lib/format'
-import type { DayTotals, Entry, Food } from '@/types'
+import type { DayTotals, Entry, Food, MetricInput } from '@/types'
 
 interface DiaryPageProps {
   foods: Food[]
@@ -20,10 +22,12 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
   const [dateKey, setDateKey] = useState(todayKey())
   const { entries, loading, error, refresh, addEntry, updateEntryQuantity, deleteEntry } =
     useEntries(dateKey)
+  const { metric, save: saveMetric } = useMetrics(dateKey)
 
   const [addOpen, setAddOpen] = useState(false)
   const [actionEntry, setActionEntry] = useState<Entry | null>(null)
   const [editEntry, setEditEntry] = useState<Entry | null>(null)
+  const [metricsOpen, setMetricsOpen] = useState(false)
 
   const totals: DayTotals = useMemo(
     () =>
@@ -55,6 +59,16 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
   const handleUpdateQuantity = async (entry: Entry, quantity: number) => {
     const ok = await updateEntryQuantity(entry, quantity)
     toast(ok ? '已更新' : '保存失败，请检查网络', ok ? 'success' : 'error')
+    return ok
+  }
+
+  const handleSaveMetric = async (input: MetricInput) => {
+    const ok = await saveMetric(input)
+    const cleared = input.weight_kg == null && input.burn_kcal == null
+    toast(
+      ok ? (cleared ? '已清除' : '已保存') : '保存失败，请检查网络',
+      ok ? 'success' : 'error',
+    )
     return ok
   }
 
@@ -117,6 +131,12 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
               {fmtKcal(totals.kcal)}
             </div>
             <div className="mt-1 text-[13px] text-[#8E8E93]">今日总热量（千卡）</div>
+            {metric?.burn_kcal != null && (
+              <div className="tnum mt-1.5 text-[13px] text-[#8E8E93]">
+                消耗 {fmtKcal(metric.burn_kcal)} 千卡 · 净摄入{' '}
+                {fmtKcal(totals.kcal - metric.burn_kcal)} 千卡
+              </div>
+            )}
           </div>
           <div className="flex rounded-xl bg-[#F2F2F7] py-3">
             {(
@@ -136,6 +156,41 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
             ))}
           </div>
         </section>
+
+        {/* 今日指标：体重 + 总消耗，点按录入 */}
+        <button
+          type="button"
+          onClick={() => setMetricsOpen(true)}
+          className="ios-card mb-5 flex w-full items-center gap-3 px-4 py-3 text-left active:bg-[#F2F2F7]"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#34C759]/15">
+            <Scale size={18} className="text-[#34C759]" />
+          </div>
+          <div className="min-w-0 flex-1 text-[15px] font-medium text-[#1C1C1E]">今日指标</div>
+          <div className="tnum shrink-0 text-[15px] text-[#1C1C1E]">
+            <span className="mr-1 text-[12px] font-normal text-[#8E8E93]">体重</span>
+            {metric?.weight_kg != null ? (
+              <>
+                {fmtMacro(metric.weight_kg)}
+                <span className="text-[12px] font-normal text-[#8E8E93]"> kg</span>
+              </>
+            ) : (
+              <span className="text-[#C7C7CC]">—</span>
+            )}
+          </div>
+          <div className="tnum shrink-0 text-[15px] text-[#1C1C1E]">
+            <span className="mr-1 text-[12px] font-normal text-[#8E8E93]">消耗</span>
+            {metric?.burn_kcal != null ? (
+              <>
+                {fmtKcal(metric.burn_kcal)}
+                <span className="text-[12px] font-normal text-[#8E8E93]"> 千卡</span>
+              </>
+            ) : (
+              <span className="text-[#C7C7CC]">—</span>
+            )}
+          </div>
+          <ChevronRight size={16} className="shrink-0 text-[#C7C7CC]" />
+        </button>
 
         {/* 记录列表 */}
         {loading ? (
@@ -254,6 +309,14 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         entry={editEntry}
         onClose={() => setEditEntry(null)}
         onSave={handleUpdateQuantity}
+      />
+
+      <MetricsSheet
+        open={metricsOpen}
+        entryDate={dateKey}
+        metric={metric}
+        onClose={() => setMetricsOpen(false)}
+        onSave={handleSaveMetric}
       />
     </div>
   )
