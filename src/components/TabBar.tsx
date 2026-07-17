@@ -1,0 +1,59 @@
+import { BookOpenText, UtensilsCrossed } from 'lucide-react'
+import { motion } from 'framer-motion'
+
+export type TabKey = 'diary' | 'foods'
+
+interface TabBarProps {
+  active: TabKey
+  onChange: (tab: TabKey) => void
+}
+
+const TABS: { key: TabKey; label: string; icon: typeof BookOpenText }[] = [
+  { key: 'diary', label: '记录', icon: BookOpenText },
+  { key: 'foods', label: '食物库', icon: UtensilsCrossed },
+]
+
+/** iOS 风格毛玻璃底部 Tab 栏（含安全区 padding） */
+export default function TabBar({ active, onChange }: TabBarProps) {
+  return (
+    <div className="hairline-t absolute inset-x-0 bottom-0 z-40 bg-white/80 backdrop-blur-xl">
+      <div className="safe-bottom-pad">
+        <div className="flex h-[52px]">
+          {TABS.map(({ key, label, icon: Icon }) => {
+            const selected = active === key
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onChange(key)}
+                className="relative flex flex-1 flex-col items-center justify-center gap-[2px]"
+                style={{ minHeight: 44 }}
+                aria-label={label}
+              >
+                {selected && (
+                  <motion.span
+                    layoutId="tab-pill"
+                    className="absolute inset-x-8 top-[5px] bottom-[5px] rounded-full bg-[#007AFF]/10"
+                    transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+                  />
+                )}
+                <Icon
+                  size={23}
+                  strokeWidth={selected ? 2.2 : 1.8}
+                  className={selected ? 'text-[#007AFF]' : 'text-[#8E8E93]'}
+                />
+                <span
+                  className={`text-[10px] font-medium ${
+                    selected ? 'text-[#007AFF]' : 'text-[#8E8E93]'
+                  }`}
+                >
+                  {label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}

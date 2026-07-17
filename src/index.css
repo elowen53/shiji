@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.625rem;
+
+    /* iOS palette */
+    --ios-bg: #f2f2f7;
+    --ios-card: #ffffff;
+    --ios-blue: #007aff;
+    --ios-red: #ff3b30;
+    --ios-green: #34c759;
+    --ios-gray: #8e8e93;
+    --ios-gray-2: #aeaeb2;
+    --ios-separator: rgba(60, 60, 67, 0.12);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    height: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply text-foreground;
+    height: 100%;
+    margin: 0;
+    overscroll-behavior: none;
+    background: #1c1c1e;
+    font-family:
+      -apple-system,
+      BlinkMacSystemFont,
+      'SF Pro SC',
+      'SF Pro Text',
+      'PingFang SC',
+      'Helvetica Neue',
+      'Segoe UI',
+      'Microsoft YaHei',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  input,
+  textarea {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  /* 防止 iOS 输入框自动缩放：输入字号 ≥16px */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  button {
+    font-family: inherit;
+    touch-action: manipulation;
+  }
+
+  #root {
+    height: 100%;
+  }
+}
+
+@layer components {
+  /* 数字等宽 */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /* 应用外壳：手机全屏，桌面居中窄栏 */
+  .app-shell {
+    position: relative;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 430px;
+    height: 100dvh;
+    background: var(--ios-bg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (min-width: 520px) {
+    .app-shell {
+      height: min(100dvh, 920px);
+      margin-top: max(0px, calc((100dvh - 920px) / 2));
+      border-radius: 44px;
+      box-shadow:
+        0 0 0 10px #2c2c2e,
+        0 0 0 12px #48484a,
+        0 40px 80px rgba(0, 0, 0, 0.55);
+    }
+  }
+
+  .ios-card {
+    background: var(--ios-card);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .ios-row {
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+    padding: 10px 16px;
+    background: var(--ios-card);
+  }
+
+  .ios-separator {
+    height: 0.5px;
+    background: var(--ios-separator);
+    margin-left: 16px;
+  }
+
+  .hairline-t {
+    box-shadow: 0 -0.5px 0 var(--ios-separator);
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom-pad {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
