@@ -12,18 +12,25 @@ interface FoodFormSheetProps {
   onDelete?: () => Promise<boolean>
 }
 
-const NUM_FIELDS: { key: keyof FoodInput; label: string; placeholder: string }[] = [
-  { key: 'kcal', label: '热量（千卡）', placeholder: '0' },
+const NUM_FIELDS: { key: 'protein' | 'fat' | 'carbs'; label: string; placeholder: string }[] = [
   { key: 'protein', label: '蛋白质（克）', placeholder: '0' },
   { key: 'fat', label: '脂肪（克）', placeholder: '0' },
   { key: 'carbs', label: '碳水（克）', placeholder: '0' },
 ]
 
+/** 三大营养素 → 热量换算系数（千卡/克） */
+const KCAL_PER_G = { protein: 4, fat: 9, carbs: 4 } as const
+
+const parseNum = (s: string) => {
+  const v = parseFloat(s)
+  return Number.isFinite(v) && v >= 0 ? v : 0
+}
+
 /** 新增 / 编辑食物：名称与单位完全自定义，营养值为每单位含量 */
 export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }: FoodFormSheetProps) {
   const [name, setName] = useState('')
   const [unit, setUnit] = useState('')
-  const [nums, setNums] = useState({ kcal: '', protein: '', fat: '', carbs: '' })
+  const [nums, setNums] = useState({ protein: '', fat: '', carbs: '' })
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const deleteTimer = useRef<number | null>(null)
@@ -33,7 +40,6 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
       setName(food?.name ?? '')
       setUnit(food?.unit ?? '')
       setNums({
-        kcal: food ? String(food.kcal) : '',
         protein: food ? String(food.protein) : '',
         fat: food ? String(food.fat) : '',
         carbs: food ? String(food.carbs) : '',
@@ -51,20 +57,24 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
 
   const valid = name.trim().length > 0 && unit.trim().length > 0
 
+  /** 按蛋白质 4 / 脂肪 9 / 碳水 4 千卡每克自动折算热量 */
+  const autoKcal =
+    Math.round(
+      (parseNum(nums.protein) * KCAL_PER_G.protein +
+        parseNum(nums.fat) * KCAL_PER_G.fat +
+        parseNum(nums.carbs) * KCAL_PER_G.carbs) * 10
+    ) / 10
+
   const handleSave = async () => {
     if (!valid || saving) return
     setSaving(true)
-    const num = (s: string) => {
-      const v = parseFloat(s)
-      return Number.isFinite(v) && v >= 0 ? v : 0
-    }
     const ok = await onSave({
       name: name.trim(),
       unit: unit.trim(),
-      kcal: num(nums.kcal),
-      protein: num(nums.protein),
-      fat: num(nums.fat),
-      carbs: num(nums.carbs),
+      kcal: autoKcal,
+      protein: parseNum(nums.protein),
+      fat: parseNum(nums.fat),
+      carbs: parseNum(nums.carbs),
     })
     setSaving(false)
     if (ok) onClose()
@@ -121,7 +131,7 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
           </div>
         </div>
 
-        <div className="mb-1 px-4 text-[13px] text-[#8E8E93]">每单位营养含量</div>
+        <div className="mb-1 px-4 text-[13px] text-[#8E8E93]">每单位三大营养素</div>
         <div className="ios-card mb-6">
           {NUM_FIELDS.map(({ key, label, placeholder }, i) => (
             <div key={key}>
@@ -129,7 +139,7 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
               <div className="ios-row gap-3">
                 <div className="flex-1 text-[16px] text-[#1C1C1E]">{label}</div>
                 <input
-                  value={nums[key as keyof typeof nums]}
+                  value={nums[key]}
                   onChange={(e) =>
                     setNums((prev) => ({ ...prev, [key]: e.target.value }))
                   }
@@ -142,7 +152,17 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
               </div>
             </div>
           ))}
+          <div className="ios-separator" />
+          <div className="ios-row gap-3">
+            <div className="flex-1 text-[16px] text-[#8E8E93]">热量（自动计算）</div>
+            <div className="tnum text-right text-[16px] font-semibold text-[#007AFF]">
+              {Math.round(autoKcal)} 千卡
+            </div>
+          </div>
         </div>
+        <p className="-mt-4 mb-6 px-4 text-[12px] text-[#AEAEB2]">
+          按 蛋白质×4 + 脂肪×9 + 碳水×4 千卡/克 自动折算
+        </p>
 
         <button
           type="button"
