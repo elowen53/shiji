@@ -1,7 +1,7 @@
-import { BookOpenText, UtensilsCrossed } from 'lucide-react'
+import { BookOpenText, TrendingUp, UtensilsCrossed } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-export type TabKey = 'diary' | 'foods'
+export type TabKey = 'diary' | 'trends' | 'foods'
 
 interface TabBarProps {
   active: TabKey
@@ -10,6 +10,7 @@ interface TabBarProps {
 
 const TABS: { key: TabKey; label: string; icon: typeof BookOpenText }[] = [
   { key: 'diary', label: '记录', icon: BookOpenText },
+  { key: 'trends', label: '趋势', icon: TrendingUp },
   { key: 'foods', label: '食物库', icon: UtensilsCrossed },
 ]
 
