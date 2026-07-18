@@ -26,11 +26,18 @@ const parseNum = (s: string) => {
   return Number.isFinite(v) && v >= 0 ? v : 0
 }
 
+/** 按三大营养素折算热量（与表单逻辑一致） */
+const kcalFromMacros = (protein: number, fat: number, carbs: number) =>
+  Math.round(
+    (protein * KCAL_PER_G.protein + fat * KCAL_PER_G.fat + carbs * KCAL_PER_G.carbs) * 10,
+  ) / 10
+
 /** 新增 / 编辑食物：名称与单位完全自定义，营养值为每单位含量 */
 export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }: FoodFormSheetProps) {
   const [name, setName] = useState('')
   const [unit, setUnit] = useState('')
   const [nums, setNums] = useState({ protein: '', fat: '', carbs: '' })
+  const [manualKcal, setManualKcal] = useState('')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const deleteTimer = useRef<number | null>(null)
@@ -44,6 +51,13 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
         fat: food ? String(food.fat) : '',
         carbs: food ? String(food.carbs) : '',
       })
+      // 存储热量与三大营养素折算值不一致（误差 >0.5）→ 视为手动覆盖过，回填手动值
+      if (food) {
+        const auto = kcalFromMacros(food.protein, food.fat, food.carbs)
+        setManualKcal(Math.abs(food.kcal - auto) > 0.5 ? String(food.kcal) : '')
+      } else {
+        setManualKcal('')
+      }
       setSaving(false)
       setConfirmingDelete(false)
     }
@@ -58,12 +72,13 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
   const valid = name.trim().length > 0 && unit.trim().length > 0
 
   /** 按蛋白质 4 / 脂肪 9 / 碳水 4 千卡每克自动折算热量 */
-  const autoKcal =
-    Math.round(
-      (parseNum(nums.protein) * KCAL_PER_G.protein +
-        parseNum(nums.fat) * KCAL_PER_G.fat +
-        parseNum(nums.carbs) * KCAL_PER_G.carbs) * 10
-    ) / 10
+  const autoKcal = kcalFromMacros(parseNum(nums.protein), parseNum(nums.fat), parseNum(nums.carbs))
+
+  /** 手动热量：填写正数则覆盖自动值 */
+  const manualKcalValue = (() => {
+    const v = parseFloat(manualKcal)
+    return Number.isFinite(v) && v > 0 ? Math.round(v * 10) / 10 : null
+  })()
 
   const handleSave = async () => {
     if (!valid || saving) return
@@ -71,7 +86,7 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
     const ok = await onSave({
       name: name.trim(),
       unit: unit.trim(),
-      kcal: autoKcal,
+      kcal: manualKcalValue ?? autoKcal,
       protein: parseNum(nums.protein),
       fat: parseNum(nums.fat),
       carbs: parseNum(nums.carbs),
@@ -162,9 +177,24 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
               {Math.round(autoKcal)} 千卡
             </div>
           </div>
+          <div className="ios-separator" />
+          <div className="ios-row gap-3">
+            <div className="flex-1 text-[16px] text-ink">手动热量（可选）</div>
+            <input
+              value={manualKcal}
+              onChange={(e) => setManualKcal(e.target.value)}
+              placeholder={String(Math.round(autoKcal))}
+              aria-label="手动热量（可选，千卡）"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              className="tnum w-28 bg-transparent text-right text-[16px] text-ink outline-none placeholder:text-ink-3"
+            />
+          </div>
         </div>
         <p className="-mt-4 mb-6 px-4 text-[12px] text-ink-2">
-          按 蛋白质×4 + 脂肪×9 + 碳水×4 千卡/克 自动折算
+          按 蛋白质×4 + 脂肪×9 + 碳水×4 千卡/克 自动折算；填写手动热量则优先使用。
+          包装食品标签能量单位为 kJ，÷4.184 即千卡
         </p>
 
         <button

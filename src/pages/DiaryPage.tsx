@@ -20,14 +20,24 @@ interface DiaryPageProps {
 export default function DiaryPage({ foods }: DiaryPageProps) {
   const { toast } = useToast()
   const [dateKey, setDateKey] = useState(todayKey())
-  const { entries, loading, error, refresh, addEntry, updateEntryQuantity, deleteEntry } =
-    useEntries(dateKey)
-  const { metric, save: saveMetric } = useMetrics(dateKey)
+  const {
+    entries,
+    loading,
+    error,
+    refresh,
+    addEntry,
+    updateEntryQuantity,
+    deleteEntry,
+    prevDayCount,
+    copyFromPrevDay,
+  } = useEntries(dateKey)
+  const { metric, latestWeight, save: saveMetric } = useMetrics(dateKey)
 
   const [addOpen, setAddOpen] = useState(false)
   const [actionEntry, setActionEntry] = useState<Entry | null>(null)
   const [editEntry, setEditEntry] = useState<Entry | null>(null)
   const [metricsOpen, setMetricsOpen] = useState(false)
+  const [copying, setCopying] = useState(false)
 
   const totals: DayTotals = useMemo(
     () =>
@@ -42,6 +52,21 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
       ),
     [entries],
   )
+
+  /** 蛋白质 g/kg：当日蛋白质总量 ÷ 最近体重；无体重数据为 null */
+  const proteinPerKg =
+    latestWeight != null && latestWeight > 0 ? totals.protein / latestWeight : null
+
+  const handleCopyPrevDay = async () => {
+    if (copying) return
+    setCopying(true)
+    const ok = await copyFromPrevDay()
+    setCopying(false)
+    toast(
+      ok ? `已复制 ${prevDayCount} 条记录` : '复制失败，请检查网络',
+      ok ? 'success' : 'error',
+    )
+  }
 
   const handleAdd = async (food: Food, quantity: number) => {
     const ok = await addEntry(food, quantity, dateKey)
@@ -141,17 +166,25 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
           <div className="flex rounded-xl bg-grouped py-3">
             {(
               [
-                ['蛋白质', totals.protein, 'text-brand'],
-                ['脂肪', totals.fat, 'text-warn'],
-                ['碳水', totals.carbs, 'text-success'],
+                [
+                  '蛋白质',
+                  totals.protein,
+                  'text-brand',
+                  proteinPerKg != null ? `${proteinPerKg.toFixed(1)} g/kg` : '',
+                ],
+                ['脂肪', totals.fat, 'text-warn', ''],
+                ['碳水', totals.carbs, 'text-success', ''],
               ] as const
-            ).map(([label, v, colorClass]) => (
+            ).map(([label, v, colorClass, sub]) => (
               <div key={label} className="flex-1 text-center">
                 <div className={`tnum text-[18px] font-semibold ${colorClass}`}>
                   {fmtMacro(v)}
                   <span className="text-[12px] font-normal text-ink-2"> g</span>
                 </div>
                 <div className="mt-[1px] text-[12px] text-ink-2">{label}</div>
+                {proteinPerKg != null && (
+                  <div className="tnum mt-[1px] h-4 text-[12px] leading-4 text-ink-2">{sub}</div>
+                )}
               </div>
             ))}
           </div>
@@ -226,6 +259,19 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
               {isToday(dateKey) ? '今天还没有记录' : '这一天没有记录'}
             </div>
             <div className="text-[14px] text-ink-2">点右下角 ＋ 添加第一笔</div>
+            {prevDayCount > 0 && (
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileTap={{ scale: 0.97 }}
+                disabled={copying}
+                onClick={() => void handleCopyPrevDay()}
+                className="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-brand px-6 text-[16px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
+              >
+                {copying ? '复制中…' : `复制昨天的记录（${prevDayCount} 条）`}
+              </motion.button>
+            )}
           </div>
         ) : (
           <div className="ios-card">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { addDays } from '@/lib/date'
 import type { Entry, Food } from '@/types'
 
 export interface EntriesApi {
@@ -11,12 +12,17 @@ export interface EntriesApi {
   addEntry: (food: Food, quantity: number, entryDate: string) => Promise<boolean>
   updateEntryQuantity: (entry: Entry, quantity: number) => Promise<boolean>
   deleteEntry: (id: string) => Promise<boolean>
+  /** 前一天的记录条数（仅当天为空时有意义，用于「复制昨天的记录」） */
+  prevDayCount: number
+  /** 把前一天的全部记录复制到当前日期（新行、新 created_at，快照字段原样拷贝） */
+  copyFromPrevDay: () => Promise<boolean>
 }
 
 export function useEntries(entryDate: string): EntriesApi {
   const [entries, setEntries] = useState<Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [prevDayCount, setPrevDayCount] = useState(0)
 
   const refresh = useCallback(async () => {
     if (!supabase) return
@@ -38,6 +44,56 @@ export function useEntries(entryDate: string): EntriesApi {
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  // 仅当天为空时探测前一天条数，供「复制昨天的记录」按钮使用
+  useEffect(() => {
+    if (!supabase || loading || entries.length > 0) {
+      setPrevDayCount(0)
+      return
+    }
+    let cancelled = false
+    supabase
+      .from('entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('entry_date', addDays(entryDate, -1))
+      .then(({ count }) => {
+        if (!cancelled) setPrevDayCount(count ?? 0)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [loading, entries.length, entryDate])
+
+  const copyFromPrevDay = useCallback(async () => {
+    if (!supabase) return false
+    const { data, error: readErr } = await supabase
+      .from('entries')
+      .select('*')
+      .eq('entry_date', addDays(entryDate, -1))
+      .order('created_at', { ascending: true })
+    if (readErr || !data || data.length === 0) return false
+    const rows = (data as Entry[]).map((e) => ({
+      entry_date: entryDate,
+      food_id: e.food_id,
+      food_name: e.food_name,
+      unit: e.unit,
+      quantity: e.quantity,
+      kcal: e.kcal,
+      protein: e.protein,
+      fat: e.fat,
+      carbs: e.carbs,
+    }))
+    const { data: inserted, error: insertErr } = await supabase
+      .from('entries')
+      .insert(rows)
+      .select()
+    if (insertErr) {
+      setError(insertErr.message)
+      return false
+    }
+    setEntries((prev) => [...prev, ...((inserted ?? []) as Entry[])])
+    return true
+  }, [entryDate])
 
   const addEntry = useCallback(
     async (food: Food, quantity: number, date: string) => {
@@ -111,5 +167,15 @@ export function useEntries(entryDate: string): EntriesApi {
     return true
   }, [])
 
-  return { entries, loading, error, refresh, addEntry, updateEntryQuantity, deleteEntry }
+  return {
+    entries,
+    loading,
+    error,
+    refresh,
+    addEntry,
+    updateEntryQuantity,
+    deleteEntry,
+    prevDayCount,
+    copyFromPrevDay,
+  }
 }

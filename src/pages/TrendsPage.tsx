@@ -26,17 +26,20 @@ const RANGES: { key: RangeKey; label: string; days: number | null }[] = [
 const ACCENT = 'rgb(var(--color-brand))'
 const TICK_INK = 'rgb(var(--color-ink-2))'
 
+/** 图表数据点：单日体重 + 7 日移动平均（null 表示尚未积累 3 条） */
+type ChartPoint = WeightPoint & { ma: number | null }
+
 /** X 轴标签："2026-07-17" → "7/17" */
 const fmtX = (date: string) =>
   `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`
 
-/** 悬浮提示：iOS 风格深色小胶囊 */
+/** 悬浮提示：iOS 风格深色小胶囊，单日值与 7 日均线同显 */
 function TrendTooltip({
   active,
   payload,
 }: {
   active?: boolean
-  payload?: { payload: WeightPoint }[]
+  payload?: { payload: ChartPoint }[]
 }) {
   if (!active || !payload || payload.length === 0) return null
   const p = payload[0]?.payload
@@ -44,6 +47,7 @@ function TrendTooltip({
   return (
     <div className="tnum rounded-lg bg-ink/90 px-3 py-2 text-[12px] font-medium text-white shadow-lg">
       {formatDisplay(p.date)} · {fmtMacro(p.weight)} kg
+      {p.ma != null && <span className="text-white/70"> · 均值 {fmtMacro(p.ma)}</span>}
     </div>
   )
 }
@@ -54,12 +58,25 @@ export default function TrendsPage() {
 
   const days = RANGES.find((r) => r.key === range)?.days ?? null
 
+  /** 7 日移动平均：每个点取该点及之前最多 7 条均值；第 3 条记录起才绘制 */
+  const withMA = useMemo(
+    () =>
+      points.map((p, i) => {
+        if (i < 2) return { ...p, ma: null as number | null }
+        const start = Math.max(0, i - 6)
+        const slice = points.slice(start, i + 1)
+        const ma = slice.reduce((s, x) => s + x.weight, 0) / slice.length
+        return { ...p, ma: Math.round(ma * 100) / 100 }
+      }),
+    [points],
+  )
+
   /** 前端按区间过滤（切换分段不重复请求） */
   const filtered = useMemo(() => {
-    if (days == null) return points
+    if (days == null) return withMA
     const cutoff = addDays(todayKey(), -(days - 1))
-    return points.filter((p) => p.date >= cutoff)
-  }, [points, days])
+    return withMA.filter((p) => p.date >= cutoff)
+  }, [withMA, days])
 
   const latest = points.length > 0 ? points[points.length - 1] : undefined
   const prev = points.length > 1 ? points[points.length - 2] : undefined
@@ -176,6 +193,17 @@ export default function TrendsPage() {
                   该区间暂无体重记录
                 </div>
               ) : (
+              <>
+                {/* 极简图例 */}
+                <div className="mb-1 flex items-center justify-end gap-4 px-3">
+                  <span className="flex items-center gap-1.5 text-[12px] text-ink-2">
+                    <span className="h-[3px] w-4 rounded-full bg-brand/40" />
+                    单日
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[12px] text-ink-2">
+                    <span className="h-[3px] w-4 rounded-full bg-brand" />7 日均值
+                  </span>
+                </div>
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart
                     data={filtered}
@@ -220,16 +248,29 @@ export default function TrendsPage() {
                       stroke="none"
                       fill="url(#weightFill)"
                     />
+                    {/* 单日值：细线淡色小点 */}
                     <Line
                       type="monotone"
                       dataKey="weight"
                       stroke={ACCENT}
-                      strokeWidth={2}
-                      dot={{ r: 3, fill: ACCENT, strokeWidth: 0 }}
+                      strokeOpacity={0.35}
+                      strokeWidth={1.5}
+                      dot={{ r: 2, fill: ACCENT, fillOpacity: 0.45, strokeWidth: 0 }}
+                      activeDot={{ r: 4, fill: ACCENT, strokeWidth: 0 }}
+                    />
+                    {/* 7 日移动平均：加粗主色 */}
+                    <Line
+                      type="monotone"
+                      dataKey="ma"
+                      stroke={ACCENT}
+                      strokeWidth={2.5}
+                      dot={false}
                       activeDot={{ r: 4.5, fill: ACCENT, strokeWidth: 0 }}
+                      connectNulls
                     />
                   </LineChart>
                 </ResponsiveContainer>
+              </>
               )}
             </section>
           </>
