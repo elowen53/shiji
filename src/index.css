@@ -25,15 +25,20 @@
     --ring: 240 5.9% 10%;
     --radius: 0.625rem;
 
-    /* iOS palette */
-    --ios-bg: #f2f2f7;
-    --ios-card: #ffffff;
-    --ios-blue: #007aff;
-    --ios-red: #ff3b30;
-    --ios-green: #34c759;
-    --ios-gray: #8e8e93;
-    --ios-gray-2: #aeaeb2;
-    --ios-separator: rgba(60, 60, 67, 0.12);
+    /* ── 语义设计 token（iOS 浅色体系；RGB 三元组供 Tailwind alpha-value 使用）── */
+    --color-brand: 0 122 255; /* #007AFF 点缀色 */
+    --color-brand-press: 0 102 214; /* #0066D6 按压态 */
+    --color-danger: 255 59 48; /* #FF3B30 */
+    --color-success: 52 199 89; /* #34C759 */
+    --color-warn: 255 149 0; /* #FF9500 */
+    --color-ink: 28 28 30; /* #1C1C1E 主文本 */
+    --color-ink-2: 142 142 147; /* #8E8E93 次要文本（白底对比度 ≥4.5:1） */
+    --color-ink-3: 199 199 204; /* #C7C7CC 占位/装饰文本（对比度豁免） */
+    --color-fill: 229 229 234; /* #E5E5EA 填充灰（输入框/分段控件底） */
+    --color-fill-press: 209 209 214; /* #D1D1D6 填充按压态 */
+    --color-grouped: 242 242 247; /* #F2F2F7 分组背景 */
+    --color-card: 255 255 255; /* #FFFFFF 卡片 */
+    --color-separator: rgba(60, 60, 67, 0.12);
   }
 }
 
@@ -49,11 +54,11 @@
   }
 
   body {
-    @apply text-foreground;
     height: 100%;
     margin: 0;
     overscroll-behavior: none;
-    background: #1c1c1e;
+    color: rgb(var(--color-ink));
+    background: rgb(var(--color-ink));
     font-family:
       -apple-system,
       BlinkMacSystemFont,
@@ -84,6 +89,12 @@
     font-size: 16px;
   }
 
+  /* web 端键盘导航聚焦环（移动端 touch 不触发） */
+  :is(button, input, a, [role='button']):focus-visible {
+    outline: 2px solid rgb(var(--color-brand));
+    outline-offset: 2px;
+  }
+
   button {
     font-family: inherit;
     touch-action: manipulation;
@@ -108,7 +119,7 @@
     width: 100%;
     max-width: 430px;
     height: 100dvh;
-    background: var(--ios-bg);
+    background: rgb(var(--color-grouped));
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -127,7 +138,7 @@
   }
 
   .ios-card {
-    background: var(--ios-card);
+    background: rgb(var(--color-card));
     border-radius: 16px;
     overflow: hidden;
   }
@@ -137,17 +148,17 @@
     align-items: center;
     min-height: 52px;
     padding: 10px 16px;
-    background: var(--ios-card);
+    background: rgb(var(--color-card));
   }
 
   .ios-separator {
     height: 0.5px;
-    background: var(--ios-separator);
+    background: var(--color-separator);
     margin-left: 16px;
   }
 
   .hairline-t {
-    box-shadow: 0 -0.5px 0 var(--ios-separator);
+    box-shadow: 0 -0.5px 0 var(--color-separator);
   }
 
   .safe-top {

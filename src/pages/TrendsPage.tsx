@@ -22,7 +22,9 @@ const RANGES: { key: RangeKey; label: string; days: number | null }[] = [
   { key: 'all', label: '全部', days: null },
 ]
 
-const ACCENT = '#007AFF'
+/** 图表用色：引用语义 token（SVG 属性支持 CSS var） */
+const ACCENT = 'rgb(var(--color-brand))'
+const TICK_INK = 'rgb(var(--color-ink-2))'
 
 /** X 轴标签："2026-07-17" → "7/17" */
 const fmtX = (date: string) =>
@@ -40,7 +42,7 @@ function TrendTooltip({
   const p = payload[0]?.payload
   if (!p) return null
   return (
-    <div className="tnum rounded-lg bg-[#1C1C1E]/90 px-2.5 py-1.5 text-[12px] font-medium text-white shadow-lg">
+    <div className="tnum rounded-lg bg-ink/90 px-3 py-2 text-[12px] font-medium text-white shadow-lg">
       {formatDisplay(p.date)} · {fmtMacro(p.weight)} kg
     </div>
   )
@@ -67,29 +69,29 @@ export default function TrendsPage() {
   return (
     <div className="flex h-full flex-col">
       <header className="safe-top shrink-0 px-4 pb-2 pt-2">
-        <h1 className="mt-1 text-[34px] font-bold leading-tight tracking-tight text-[#1C1C1E]">
+        <h1 className="mt-1 text-[34px] font-bold leading-tight tracking-tight text-ink">
           体重趋势
         </h1>
       </header>
 
-      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-[110px]">
+      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-[112px]">
         {loading ? (
           <>
             <div className="ios-card mb-4 animate-pulse px-4 py-4">
-              <div className="mb-2 h-10 w-28 rounded bg-[#E5E5EA]" />
-              <div className="h-3 w-20 rounded bg-[#E5E5EA]" />
+              <div className="mb-2 h-10 w-28 rounded bg-fill" />
+              <div className="h-3 w-20 rounded bg-fill" />
             </div>
             <div className="ios-card animate-pulse px-4 py-4">
-              <div className="h-[240px] rounded-xl bg-[#E5E5EA]" />
+              <div className="h-[240px] rounded-xl bg-fill" />
             </div>
           </>
         ) : error ? (
           <div className="ios-card px-4 py-10 text-center">
-            <p className="mb-4 text-[15px] text-[#8E8E93]">加载失败:{error}</p>
+            <p className="mb-4 text-[15px] text-ink-2">加载失败:{error}</p>
             <button
               type="button"
               onClick={() => void refresh()}
-              className="rounded-full bg-[#007AFF] px-5 py-2 text-[15px] font-medium text-white active:bg-[#0066D6]"
+              className="rounded-full bg-brand px-5 py-2 text-[15px] font-medium text-white active:bg-brand-press"
             >
               重试
             </button>
@@ -97,10 +99,10 @@ export default function TrendsPage() {
         ) : points.length === 0 ? (
           <div className="px-4 py-16 text-center">
             <div className="mb-4 text-[52px] leading-none">⚖️</div>
-            <div className="mb-1 text-[17px] font-semibold text-[#1C1C1E]">
+            <div className="mb-1 text-[17px] font-semibold text-ink">
               还没有体重记录
             </div>
-            <div className="text-[14px] text-[#8E8E93]">
+            <div className="text-[14px] text-ink-2">
               去「记录」页点今日指标，添加今天的体重
             </div>
           </div>
@@ -111,20 +113,21 @@ export default function TrendsPage() {
               <section className="ios-card mb-4 px-4 py-4">
                 <div className="flex items-end justify-between">
                   <div>
-                    <div className="tnum text-[40px] font-bold leading-none tracking-tight text-[#1C1C1E]">
+                    <div className="tnum text-[40px] font-bold leading-none tracking-tight text-ink">
                       {fmtMacro(latest.weight)}
-                      <span className="ml-1 text-[16px] font-normal text-[#8E8E93]">
+                      <span className="ml-1 text-[16px] font-normal text-ink-2">
                         kg
                       </span>
                     </div>
-                    <div className="mt-1.5 text-[13px] text-[#8E8E93]">
+                    <div className="mt-1.5 text-[13px] text-ink-2">
                       {formatDisplay(latest.date)} 记录
                     </div>
                   </div>
                   {delta != null && delta !== 0 && (
                     <div
-                      className="tnum mb-1 text-[14px] font-medium"
-                      style={{ color: delta > 0 ? '#FF3B30' : '#34C759' }}
+                      className={`tnum mb-1 text-[14px] font-medium ${
+                        delta > 0 ? 'text-danger' : 'text-success'
+                      }`}
                     >
                       较上次 {delta > 0 ? '+' : ''}
                       {delta.toFixed(1)} kg
@@ -135,7 +138,7 @@ export default function TrendsPage() {
             )}
 
             {/* 区间分段控件 */}
-            <div className="mb-4 flex rounded-full bg-[#E5E5EA] p-[3px]">
+            <div className="mb-4 flex rounded-full bg-fill p-[3px]">
               {RANGES.map((r) => {
                 const selected = range === r.key
                 return (
@@ -143,19 +146,20 @@ export default function TrendsPage() {
                     key={r.key}
                     type="button"
                     onClick={() => setRange(r.key)}
-                    className="relative h-8 flex-1 rounded-full text-[13px] font-medium"
+                    className="relative h-8 flex-1 rounded-full text-[13px] font-medium active:opacity-70"
                     style={{ minHeight: 32 }}
+                    aria-pressed={selected}
                   >
                     {selected && (
                       <motion.span
                         layoutId="range-pill"
-                        className="absolute inset-0 rounded-full bg-white shadow-sm"
+                        className="absolute inset-0 rounded-full bg-surface shadow-sm"
                         transition={{ type: 'spring', stiffness: 500, damping: 38 }}
                       />
                     )}
                     <span
                       className={`relative z-10 ${
-                        selected ? 'text-[#1C1C1E]' : 'text-[#8E8E93]'
+                        selected ? 'text-ink' : 'text-ink-2'
                       }`}
                     >
                       {r.label}
@@ -168,7 +172,7 @@ export default function TrendsPage() {
             {/* 折线图 */}
             <section className="ios-card px-2 py-4">
               {filtered.length === 0 ? (
-                <div className="py-16 text-center text-[14px] text-[#8E8E93]">
+                <div className="py-16 text-center text-[14px] text-ink-2">
                   该区间暂无体重记录
                 </div>
               ) : (
@@ -190,7 +194,7 @@ export default function TrendsPage() {
                     <XAxis
                       dataKey="date"
                       tickFormatter={fmtX}
-                      tick={{ fontSize: 11, fill: '#8E8E93' }}
+                      tick={{ fontSize: 11, fill: TICK_INK }}
                       axisLine={false}
                       tickLine={false}
                       minTickGap={36}
@@ -200,7 +204,7 @@ export default function TrendsPage() {
                         (dataMin: number) => Math.floor(dataMin - 1),
                         (dataMax: number) => Math.ceil(dataMax + 1),
                       ]}
-                      tick={{ fontSize: 11, fill: '#8E8E93' }}
+                      tick={{ fontSize: 11, fill: TICK_INK }}
                       axisLine={false}
                       tickLine={false}
                       width={40}

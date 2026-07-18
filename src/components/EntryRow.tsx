@@ -28,7 +28,7 @@ export default function EntryRow({ entry, onDelete, onTap }: EntryRowProps) {
         type="button"
         aria-label="删除"
         onClick={() => onDelete(entry)}
-        className="absolute inset-y-0 right-0 flex w-[84px] items-center justify-center bg-[#FF3B30] text-white"
+        className="absolute inset-y-0 right-0 flex w-[84px] items-center justify-center bg-danger text-white"
       >
         <Trash2 size={20} />
       </button>
@@ -46,19 +46,19 @@ export default function EntryRow({ entry, onDelete, onTap }: EntryRowProps) {
         style={{ touchAction: 'pan-y' }}
       >
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[16px] font-medium text-[#1C1C1E]">
+          <div className="truncate text-[16px] font-medium text-ink">
             {entry.food_name}
           </div>
-          <div className="tnum mt-[1px] text-[13px] text-[#8E8E93]">
+          <div className="tnum mt-[1px] text-[13px] text-ink-2">
             {fmtQty(entry.quantity)} × {entry.unit}
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <div className="tnum text-[16px] font-semibold text-[#1C1C1E]">
+          <div className="tnum text-[16px] font-semibold text-ink">
             {fmtKcal(entry.kcal)}
-            <span className="ml-[2px] text-[12px] font-normal text-[#8E8E93]">千卡</span>
+            <span className="ml-[2px] text-[12px] font-normal text-ink-2">千卡</span>
           </div>
-          <div className="tnum mt-[1px] text-[12px] text-[#8E8E93]">
+          <div className="tnum mt-[1px] text-[12px] text-ink-2">
             蛋 {fmtMacro(entry.protein)} · 脂 {fmtMacro(entry.fat)} · 碳{' '}
             {fmtMacro(entry.carbs)}
           </div>

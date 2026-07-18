@@ -5,6 +5,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        /* ── 语义设计 token（值定义于 src/index.css :root）── */
+        brand: "rgb(var(--color-brand) / <alpha-value>)",
+        "brand-press": "rgb(var(--color-brand-press) / <alpha-value>)",
+        danger: "rgb(var(--color-danger) / <alpha-value>)",
+        success: "rgb(var(--color-success) / <alpha-value>)",
+        warn: "rgb(var(--color-warn) / <alpha-value>)",
+        ink: "rgb(var(--color-ink) / <alpha-value>)",
+        "ink-2": "rgb(var(--color-ink-2) / <alpha-value>)",
+        "ink-3": "rgb(var(--color-ink-3) / <alpha-value>)",
+        fill: "rgb(var(--color-fill) / <alpha-value>)",
+        "fill-press": "rgb(var(--color-fill-press) / <alpha-value>)",
+        grouped: "rgb(var(--color-grouped) / <alpha-value>)",
+        surface: "rgb(var(--color-card) / <alpha-value>)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

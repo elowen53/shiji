@@ -38,22 +38,22 @@ export default function QuantitySheet({ entry, onClose, onSave }: QuantitySheetP
     <BottomSheet open={entry !== null} onClose={onClose} maxHeight="70%">
       <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-1">
         <div className="w-9" />
-        <div className="max-w-[60%] truncate text-[17px] font-semibold text-[#1C1C1E]">
+        <div className="max-w-[60%] truncate text-[17px] font-semibold text-ink">
           {entry?.food_name ?? ''}
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E5E5EA]"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-fill"
           aria-label="关闭"
         >
-          <X size={18} className="text-[#1C1C1E]" />
+          <X size={18} className="text-ink" />
         </button>
       </div>
 
       {entry && (
         <div className="px-4 pb-4">
-          <div className="mb-4 text-center text-[14px] text-[#8E8E93]">
+          <div className="mb-4 text-center text-[14px] text-ink-2">
             数量（单位：{entry.unit}）
           </div>
           <div className="mb-5 flex justify-center">
@@ -62,10 +62,10 @@ export default function QuantitySheet({ entry, onClose, onSave }: QuantitySheetP
 
           <div className="ios-card mb-5 px-4 py-4">
             <div className="mb-3 text-center">
-              <span className="tnum text-[34px] font-bold leading-none text-[#1C1C1E]">
+              <span className="tnum text-[34px] font-bold leading-none text-ink">
                 {fmtKcal(entry.kcal * scale)}
               </span>
-              <span className="ml-1 text-[15px] text-[#8E8E93]">千卡</span>
+              <span className="ml-1 text-[15px] text-ink-2">千卡</span>
             </div>
             <div className="flex">
               {(
@@ -76,11 +76,11 @@ export default function QuantitySheet({ entry, onClose, onSave }: QuantitySheetP
                 ] as const
               ).map(([label, v]) => (
                 <div key={label} className="flex-1 text-center">
-                  <div className="tnum text-[17px] font-semibold text-[#1C1C1E]">
+                  <div className="tnum text-[17px] font-semibold text-ink">
                     {fmtMacro(v)}
-                    <span className="text-[12px] font-normal text-[#8E8E93]">g</span>
+                    <span className="text-[12px] font-normal text-ink-2">g</span>
                   </div>
-                  <div className="text-[12px] text-[#8E8E93]">{label}</div>
+                  <div className="text-[12px] text-ink-2">{label}</div>
                 </div>
               ))}
             </div>
@@ -90,7 +90,7 @@ export default function QuantitySheet({ entry, onClose, onSave }: QuantitySheetP
             type="button"
             disabled={saving}
             onClick={handleSave}
-            className="flex h-[50px] w-full items-center justify-center rounded-2xl bg-[#007AFF] text-[17px] font-semibold text-white active:bg-[#0066D6] disabled:opacity-60"
+            className="flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
           >
             {saving ? '保存中…' : '保存'}
           </button>

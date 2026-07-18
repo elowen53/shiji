@@ -58,10 +58,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               transition={{ type: 'spring', stiffness: 480, damping: 32 }}
               className={`max-w-[82%] rounded-full px-4 py-2 text-[14px] font-medium text-white shadow-lg ${
                 t.kind === 'error'
-                  ? 'bg-[#FF3B30]'
+                  ? 'bg-danger'
                   : t.kind === 'success'
-                    ? 'bg-[#34C759]'
-                    : 'bg-[#1C1C1E]/90'
+                    ? 'bg-success'
+                    : 'bg-ink/90'
               }`}
             >
               {t.text}

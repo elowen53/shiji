@@ -58,45 +58,47 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
     <BottomSheet open={open} onClose={onClose} maxHeight="72%">
       <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-1">
         <div className="w-9" />
-        <div className="text-[17px] font-semibold text-[#1C1C1E]">
+        <div className="text-[17px] font-semibold text-ink">
           {formatDisplay(entryDate)} 指标
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E5E5EA]"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-fill"
           aria-label="关闭"
         >
-          <X size={18} className="text-[#1C1C1E]" />
+          <X size={18} className="text-ink" />
         </button>
       </div>
 
       <div className="px-4 pb-4">
         <div className="ios-card mb-6">
           <div className="ios-row gap-3">
-            <div className="flex-1 text-[16px] text-[#1C1C1E]">体重（kg）</div>
+            <div className="flex-1 text-[16px] text-ink">体重（kg）</div>
             <input
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               placeholder="—"
+              aria-label="体重（千克）"
               type="number"
               inputMode="decimal"
               min={0}
               step={0.1}
-              className="tnum w-28 bg-transparent text-right text-[16px] text-[#1C1C1E] outline-none placeholder:text-[#C7C7CC]"
+              className="tnum w-28 bg-transparent text-right text-[16px] text-ink outline-none placeholder:text-ink-3"
             />
           </div>
           <div className="ios-separator" />
           <div className="ios-row gap-3">
-            <div className="flex-1 text-[16px] text-[#1C1C1E]">总消耗（千卡）</div>
+            <div className="flex-1 text-[16px] text-ink">总消耗（千卡）</div>
             <input
               value={burn}
               onChange={(e) => setBurn(e.target.value)}
               placeholder="—"
+              aria-label="总消耗（千卡）"
               type="number"
               inputMode="decimal"
               min={0}
-              className="tnum w-28 bg-transparent text-right text-[16px] text-[#1C1C1E] outline-none placeholder:text-[#C7C7CC]"
+              className="tnum w-28 bg-transparent text-right text-[16px] text-ink outline-none placeholder:text-ink-3"
             />
           </div>
         </div>
@@ -105,7 +107,7 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
           type="button"
           disabled={!hasAnyValue || saving}
           onClick={handleSave}
-          className="mb-3 flex h-[50px] w-full items-center justify-center rounded-2xl bg-[#007AFF] text-[17px] font-semibold text-white active:bg-[#0066D6] disabled:opacity-40"
+          className="mb-3 flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-40"
         >
           {saving ? '保存中…' : '保存'}
         </button>
@@ -115,12 +117,12 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
             type="button"
             disabled={saving}
             onClick={handleClear}
-            className="flex h-[50px] w-full items-center justify-center rounded-2xl bg-white text-[17px] font-semibold text-[#FF3B30] active:bg-[#F2F2F7] disabled:opacity-40"
+            className="flex h-[52px] w-full items-center justify-center rounded-2xl bg-surface text-[17px] font-semibold text-danger active:bg-grouped disabled:opacity-40"
           >
             清除当天指标
           </button>
         )}
-        <p className="mt-3 text-center text-[12px] text-[#AEAEB2]">
+        <p className="mt-3 text-center text-[12px] text-ink-2">
           可以只填一项，留空的项不保存
         </p>
       </div>

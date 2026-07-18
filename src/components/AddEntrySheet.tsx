@@ -57,24 +57,24 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
           <button
             type="button"
             onClick={() => setStep('pick')}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E5E5EA]"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-fill"
             aria-label="返回"
           >
-            <ChevronLeft size={20} className="text-[#1C1C1E]" />
+            <ChevronLeft size={20} className="text-ink" />
           </button>
         ) : (
           <div className="w-9" />
         )}
-        <div className="text-[17px] font-semibold text-[#1C1C1E]">
+        <div className="text-[17px] font-semibold text-ink">
           {step === 'pick' ? '添加记录' : selected?.name}
         </div>
         <button
           type="button"
           onClick={handleClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E5E5EA]"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-fill"
           aria-label="关闭"
         >
-          <X size={18} className="text-[#1C1C1E]" />
+          <X size={18} className="text-ink" />
         </button>
       </div>
 
@@ -90,19 +90,20 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
               transition={{ type: 'spring', stiffness: 420, damping: 38 }}
             >
               {/* 搜索框 */}
-              <div className="mb-3 flex h-10 items-center gap-2 rounded-xl bg-[#E5E5EA] px-3">
-                <Search size={17} className="shrink-0 text-[#8E8E93]" />
+              <div className="mb-3 flex h-10 items-center gap-2 rounded-xl bg-fill px-3">
+                <Search size={17} className="shrink-0 text-ink-2" />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="搜索食物"
-                  className="w-full bg-transparent text-[16px] text-[#1C1C1E] outline-none placeholder:text-[#8E8E93]"
+                  aria-label="搜索食物"
+                  className="w-full bg-transparent text-[16px] text-ink outline-none placeholder:text-ink-2"
                 />
               </div>
 
               <div className="ios-card no-scrollbar max-h-[340px] overflow-y-auto">
                 {filtered.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-[15px] text-[#8E8E93]">
+                  <div className="px-4 py-10 text-center text-[15px] text-ink-2">
                     {foods.length === 0
                       ? '食物库还是空的，先去「食物库」添加吧'
                       : '没有匹配的食物'}
@@ -118,15 +119,15 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
                           setQuantity(1)
                           setStep('quantity')
                         }}
-                        className="ios-row w-full gap-3 text-left active:bg-[#F2F2F7]"
+                        className="ios-row w-full gap-3 text-left active:bg-grouped"
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[16px] text-[#1C1C1E]">{f.name}</div>
-                          <div className="tnum mt-[1px] text-[13px] text-[#8E8E93]">
+                          <div className="truncate text-[16px] text-ink">{f.name}</div>
+                          <div className="tnum mt-[1px] text-[13px] text-ink-2">
                             每{f.unit}
                           </div>
                         </div>
-                        <div className="tnum shrink-0 text-[15px] text-[#8E8E93]">
+                        <div className="tnum shrink-0 text-[15px] text-ink-2">
                           {fmtKcal(f.kcal)} 千卡
                         </div>
                       </button>
@@ -146,7 +147,7 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
             >
               {selected && (
                 <>
-                  <div className="mb-4 text-center text-[14px] text-[#8E8E93]">
+                  <div className="mb-4 text-center text-[14px] text-ink-2">
                     数量（单位：{selected.unit}）
                   </div>
                   <div className="mb-5 flex justify-center">
@@ -156,10 +157,10 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
                   {/* 实时折算预览 */}
                   <div className="ios-card mb-5 px-4 py-4">
                     <div className="mb-3 text-center">
-                      <span className="tnum text-[34px] font-bold leading-none text-[#1C1C1E]">
+                      <span className="tnum text-[34px] font-bold leading-none text-ink">
                         {fmtKcal(selected.kcal * quantity)}
                       </span>
-                      <span className="ml-1 text-[15px] text-[#8E8E93]">千卡</span>
+                      <span className="ml-1 text-[15px] text-ink-2">千卡</span>
                     </div>
                     <div className="flex">
                       {(
@@ -170,11 +171,11 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
                         ] as const
                       ).map(([label, v]) => (
                         <div key={label} className="flex-1 text-center">
-                          <div className="tnum text-[17px] font-semibold text-[#1C1C1E]">
+                          <div className="tnum text-[17px] font-semibold text-ink">
                             {fmtMacro(v)}
-                            <span className="text-[12px] font-normal text-[#8E8E93]">g</span>
+                            <span className="text-[12px] font-normal text-ink-2">g</span>
                           </div>
-                          <div className="text-[12px] text-[#8E8E93]">{label}</div>
+                          <div className="text-[12px] text-ink-2">{label}</div>
                         </div>
                       ))}
                     </div>
@@ -184,7 +185,7 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
                     type="button"
                     disabled={saving}
                     onClick={handleSave}
-                    className="flex h-[50px] w-full items-center justify-center rounded-2xl bg-[#007AFF] text-[17px] font-semibold text-white active:bg-[#0066D6] disabled:opacity-60"
+                    className="flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
                   >
                     {saving ? '保存中…' : '保存'}
                   </button>

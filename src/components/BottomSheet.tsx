@@ -34,7 +34,7 @@ export default function BottomSheet({
           />
           <motion.div
             key="sheet"
-            className="absolute inset-x-0 bottom-0 z-50 flex flex-col overflow-hidden rounded-t-[20px] bg-[#F2F2F7]"
+            className="absolute inset-x-0 bottom-0 z-50 flex flex-col overflow-hidden rounded-t-[20px] bg-grouped"
             style={{ maxHeight }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
@@ -48,7 +48,7 @@ export default function BottomSheet({
             }}
           >
             <div className="flex shrink-0 justify-center pb-1 pt-2">
-              <div className="h-[5px] w-9 rounded-full bg-[#D1D1D6]" />
+              <div className="h-[5px] w-9 rounded-full bg-fill-press" />
             </div>
             {children}
           </motion.div>

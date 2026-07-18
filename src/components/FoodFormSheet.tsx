@@ -97,16 +97,16 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
     <BottomSheet open={open} onClose={onClose}>
       <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-1">
         <div className="w-9" />
-        <div className="text-[17px] font-semibold text-[#1C1C1E]">
+        <div className="text-[17px] font-semibold text-ink">
           {food ? '编辑食物' : '新增食物'}
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E5E5EA]"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-fill"
           aria-label="关闭"
         >
-          <X size={18} className="text-[#1C1C1E]" />
+          <X size={18} className="text-ink" />
         </button>
       </div>
 
@@ -117,7 +117,8 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="名称，如：鸡胸肉"
-              className="w-full bg-transparent text-[16px] text-[#1C1C1E] outline-none placeholder:text-[#C7C7CC]"
+              aria-label="食物名称"
+              className="w-full bg-transparent text-[16px] text-ink outline-none placeholder:text-ink-3"
             />
           </div>
           <div className="ios-separator" />
@@ -126,41 +127,43 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
               placeholder="单位，如：100g / 1份 / 1碗"
-              className="w-full bg-transparent text-[16px] text-[#1C1C1E] outline-none placeholder:text-[#C7C7CC]"
+              aria-label="单位"
+              className="w-full bg-transparent text-[16px] text-ink outline-none placeholder:text-ink-3"
             />
           </div>
         </div>
 
-        <div className="mb-1 px-4 text-[13px] text-[#8E8E93]">每单位三大营养素</div>
+        <div className="mb-1 px-4 text-[13px] text-ink-2">每单位三大营养素</div>
         <div className="ios-card mb-6">
           {NUM_FIELDS.map(({ key, label, placeholder }, i) => (
             <div key={key}>
               {i > 0 && <div className="ios-separator" />}
               <div className="ios-row gap-3">
-                <div className="flex-1 text-[16px] text-[#1C1C1E]">{label}</div>
+                <div className="flex-1 text-[16px] text-ink">{label}</div>
                 <input
                   value={nums[key]}
                   onChange={(e) =>
                     setNums((prev) => ({ ...prev, [key]: e.target.value }))
                   }
                   placeholder={placeholder}
+                  aria-label={label}
                   type="number"
                   inputMode="decimal"
                   min={0}
-                  className="tnum w-28 bg-transparent text-right text-[16px] text-[#1C1C1E] outline-none placeholder:text-[#C7C7CC]"
+                  className="tnum w-28 bg-transparent text-right text-[16px] text-ink outline-none placeholder:text-ink-3"
                 />
               </div>
             </div>
           ))}
           <div className="ios-separator" />
           <div className="ios-row gap-3">
-            <div className="flex-1 text-[16px] text-[#8E8E93]">热量（自动计算）</div>
-            <div className="tnum text-right text-[16px] font-semibold text-[#007AFF]">
+            <div className="flex-1 text-[16px] text-ink-2">热量（自动计算）</div>
+            <div className="tnum text-right text-[16px] font-semibold text-brand">
               {Math.round(autoKcal)} 千卡
             </div>
           </div>
         </div>
-        <p className="-mt-4 mb-6 px-4 text-[12px] text-[#AEAEB2]">
+        <p className="-mt-4 mb-6 px-4 text-[12px] text-ink-2">
           按 蛋白质×4 + 脂肪×9 + 碳水×4 千卡/克 自动折算
         </p>
 
@@ -168,7 +171,7 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
           type="button"
           disabled={!valid || saving}
           onClick={handleSave}
-          className="mb-3 flex h-[50px] w-full items-center justify-center rounded-2xl bg-[#007AFF] text-[17px] font-semibold text-white active:bg-[#0066D6] disabled:opacity-40"
+          className="mb-3 flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-40"
         >
           {saving ? '保存中…' : '保存'}
         </button>
@@ -177,17 +180,17 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
           <button
             type="button"
             onClick={handleDelete}
-            className={`flex h-[50px] w-full items-center justify-center rounded-2xl text-[17px] font-semibold transition-colors ${
+            className={`flex h-[52px] w-full items-center justify-center rounded-2xl text-[17px] font-semibold transition-colors ${
               confirmingDelete
-                ? 'bg-[#FF3B30] text-white'
-                : 'bg-white text-[#FF3B30]'
+                ? 'bg-danger text-white'
+                : 'bg-surface text-danger'
             }`}
           >
             {confirmingDelete ? '再点一次确认删除' : '删除食物'}
           </button>
         )}
         {food && (
-          <p className="mt-3 text-center text-[12px] text-[#AEAEB2]">
+          <p className="mt-3 text-center text-[12px] text-ink-2">
             删除食物不会影响已保存的历史记录
           </p>
         )}

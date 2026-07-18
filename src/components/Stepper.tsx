@@ -17,7 +17,7 @@ export default function Stepper({ value, onChange, step = 0.5, min = 0.5 }: Step
         type="button"
         aria-label="减少"
         onClick={() => onChange(clamp(value - step))}
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-[#E5E5EA] text-[#1C1C1E] active:bg-[#D1D1D6]"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-fill text-ink active:bg-fill-press"
       >
         <Minus size={20} strokeWidth={2.4} />
       </button>
@@ -26,18 +26,19 @@ export default function Stepper({ value, onChange, step = 0.5, min = 0.5 }: Step
         inputMode="decimal"
         step={step}
         min={min}
+        aria-label="数量"
         value={Number.isFinite(value) ? value : ''}
         onChange={(e) => {
           const v = parseFloat(e.target.value)
           if (Number.isFinite(v)) onChange(clamp(v))
         }}
-        className="tnum h-12 w-24 rounded-xl bg-[#E5E5EA] text-center text-[22px] font-semibold text-[#1C1C1E] outline-none"
+        className="tnum h-12 w-24 rounded-xl bg-fill text-center text-[20px] font-semibold text-ink outline-none"
       />
       <button
         type="button"
         aria-label="增加"
         onClick={() => onChange(clamp(value + step))}
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-[#007AFF] text-white active:bg-[#0066D6]"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-brand text-white active:bg-brand-press"
       >
         <Plus size={20} strokeWidth={2.4} />
       </button>

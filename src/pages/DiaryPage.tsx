@@ -81,18 +81,18 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
             type="button"
             aria-label="前一天"
             onClick={() => setDateKey((k) => addDays(k, -1))}
-            className="flex h-11 w-11 items-center justify-center rounded-full text-[#007AFF] active:bg-[#007AFF]/10"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-brand active:bg-brand/10"
           >
             <ChevronLeft size={26} strokeWidth={2.2} />
           </button>
           <div className="text-center">
-            <div className="text-[13px] font-medium text-[#8E8E93]">{weekdayLabel(dateKey)}</div>
+            <div className="text-[13px] font-medium text-ink-2">{weekdayLabel(dateKey)}</div>
           </div>
           <button
             type="button"
             aria-label="后一天"
             onClick={() => setDateKey((k) => addDays(k, 1))}
-            className="flex h-11 w-11 items-center justify-center rounded-full text-[#007AFF] active:bg-[#007AFF]/10"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-brand active:bg-brand/10"
           >
             <ChevronRight size={26} strokeWidth={2.2} />
           </button>
@@ -105,7 +105,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.16 }}
-              className="text-[34px] font-bold leading-tight tracking-tight text-[#1C1C1E]"
+              className="text-[34px] font-bold leading-tight tracking-tight text-ink"
             >
               {formatDisplay(dateKey)}
             </motion.h1>
@@ -114,7 +114,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
             <button
               type="button"
               onClick={() => setDateKey(todayKey())}
-              className="mb-1 rounded-full bg-[#007AFF]/10 px-3.5 py-1.5 text-[14px] font-medium text-[#007AFF] active:bg-[#007AFF]/20"
+              className="mb-1 rounded-full bg-brand/10 px-3.5 py-1.5 text-[14px] font-medium text-brand active:bg-brand/20"
             >
               今天
             </button>
@@ -123,35 +123,35 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
       </header>
 
       {/* 内容区 */}
-      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-[150px]">
+      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-[152px]">
         {/* 当日汇总卡片 */}
         <section className="ios-card mb-5 px-4 py-4">
           <div className="mb-3 text-center">
-            <div className="tnum text-[44px] font-bold leading-none tracking-tight text-[#1C1C1E]">
+            <div className="tnum text-[44px] font-bold leading-none tracking-tight text-ink">
               {fmtKcal(totals.kcal)}
             </div>
-            <div className="mt-1 text-[13px] text-[#8E8E93]">今日总热量（千卡）</div>
+            <div className="mt-1 text-[13px] text-ink-2">今日总热量（千卡）</div>
             {metric?.burn_kcal != null && (
-              <div className="tnum mt-1.5 text-[13px] text-[#8E8E93]">
+              <div className="tnum mt-1.5 text-[13px] text-ink-2">
                 消耗 {fmtKcal(metric.burn_kcal)} 千卡 · 净摄入{' '}
                 {fmtKcal(totals.kcal - metric.burn_kcal)} 千卡
               </div>
             )}
           </div>
-          <div className="flex rounded-xl bg-[#F2F2F7] py-3">
+          <div className="flex rounded-xl bg-grouped py-3">
             {(
               [
-                ['蛋白质', totals.protein, '#007AFF'],
-                ['脂肪', totals.fat, '#FF9500'],
-                ['碳水', totals.carbs, '#34C759'],
+                ['蛋白质', totals.protein, 'text-brand'],
+                ['脂肪', totals.fat, 'text-warn'],
+                ['碳水', totals.carbs, 'text-success'],
               ] as const
-            ).map(([label, v, color]) => (
+            ).map(([label, v, colorClass]) => (
               <div key={label} className="flex-1 text-center">
-                <div className="tnum text-[18px] font-semibold" style={{ color }}>
+                <div className={`tnum text-[18px] font-semibold ${colorClass}`}>
                   {fmtMacro(v)}
-                  <span className="text-[12px] font-normal text-[#8E8E93]"> g</span>
+                  <span className="text-[12px] font-normal text-ink-2"> g</span>
                 </div>
-                <div className="mt-[1px] text-[12px] text-[#8E8E93]">{label}</div>
+                <div className="mt-[1px] text-[12px] text-ink-2">{label}</div>
               </div>
             ))}
           </div>
@@ -161,35 +161,35 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         <button
           type="button"
           onClick={() => setMetricsOpen(true)}
-          className="ios-card mb-5 flex w-full items-center gap-3 px-4 py-3 text-left active:bg-[#F2F2F7]"
+          className="ios-card mb-5 flex w-full items-center gap-3 px-4 py-3 text-left active:bg-grouped"
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#34C759]/15">
-            <Scale size={18} className="text-[#34C759]" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-success/15">
+            <Scale size={18} className="text-success" />
           </div>
-          <div className="min-w-0 flex-1 text-[15px] font-medium text-[#1C1C1E]">今日指标</div>
-          <div className="tnum shrink-0 text-[15px] text-[#1C1C1E]">
-            <span className="mr-1 text-[12px] font-normal text-[#8E8E93]">体重</span>
+          <div className="min-w-0 flex-1 text-[15px] font-medium text-ink">今日指标</div>
+          <div className="tnum shrink-0 text-[15px] text-ink">
+            <span className="mr-1 text-[12px] font-normal text-ink-2">体重</span>
             {metric?.weight_kg != null ? (
               <>
                 {fmtMacro(metric.weight_kg)}
-                <span className="text-[12px] font-normal text-[#8E8E93]"> kg</span>
+                <span className="text-[12px] font-normal text-ink-2"> kg</span>
               </>
             ) : (
-              <span className="text-[#C7C7CC]">—</span>
+              <span className="text-ink-3">—</span>
             )}
           </div>
-          <div className="tnum shrink-0 text-[15px] text-[#1C1C1E]">
-            <span className="mr-1 text-[12px] font-normal text-[#8E8E93]">消耗</span>
+          <div className="tnum shrink-0 text-[15px] text-ink">
+            <span className="mr-1 text-[12px] font-normal text-ink-2">消耗</span>
             {metric?.burn_kcal != null ? (
               <>
                 {fmtKcal(metric.burn_kcal)}
-                <span className="text-[12px] font-normal text-[#8E8E93]"> 千卡</span>
+                <span className="text-[12px] font-normal text-ink-2"> 千卡</span>
               </>
             ) : (
-              <span className="text-[#C7C7CC]">—</span>
+              <span className="text-ink-3">—</span>
             )}
           </div>
-          <ChevronRight size={16} className="shrink-0 text-[#C7C7CC]" />
+          <ChevronRight size={16} className="shrink-0 text-ink-3" />
         </button>
 
         {/* 记录列表 */}
@@ -200,21 +200,21 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
                 {i > 0 && <div className="ios-separator" />}
                 <div className="ios-row animate-pulse gap-3">
                   <div className="flex-1">
-                    <div className="mb-2 h-4 w-24 rounded bg-[#E5E5EA]" />
-                    <div className="h-3 w-16 rounded bg-[#E5E5EA]" />
+                    <div className="mb-2 h-4 w-24 rounded bg-fill" />
+                    <div className="h-3 w-16 rounded bg-fill" />
                   </div>
-                  <div className="h-4 w-14 rounded bg-[#E5E5EA]" />
+                  <div className="h-4 w-14 rounded bg-fill" />
                 </div>
               </div>
             ))}
           </div>
         ) : error ? (
           <div className="ios-card px-4 py-10 text-center">
-            <p className="mb-4 text-[15px] text-[#8E8E93]">加载失败：{error}</p>
+            <p className="mb-4 text-[15px] text-ink-2">加载失败：{error}</p>
             <button
               type="button"
               onClick={() => void refresh()}
-              className="rounded-full bg-[#007AFF] px-5 py-2 text-[15px] font-medium text-white active:bg-[#0066D6]"
+              className="rounded-full bg-brand px-5 py-2 text-[15px] font-medium text-white active:bg-brand-press"
             >
               重试
             </button>
@@ -222,10 +222,10 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         ) : entries.length === 0 ? (
           <div className="px-4 py-14 text-center">
             <div className="mb-4 text-[52px] leading-none">🍚</div>
-            <div className="mb-1 text-[17px] font-semibold text-[#1C1C1E]">
+            <div className="mb-1 text-[17px] font-semibold text-ink">
               {isToday(dateKey) ? '今天还没有记录' : '这一天没有记录'}
             </div>
-            <div className="text-[14px] text-[#8E8E93]">点右下角 ＋ 添加第一笔</div>
+            <div className="text-[14px] text-ink-2">点右下角 ＋ 添加第一笔</div>
           </div>
         ) : (
           <div className="ios-card">
@@ -252,8 +252,8 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         onClick={() => setAddOpen(true)}
         whileTap={{ scale: 0.88 }}
         transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-        className="absolute right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/30"
-        style={{ bottom: 'calc(52px + env(safe-area-inset-bottom) + 18px)' }}
+        className="absolute right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lg shadow-brand/30"
+        style={{ bottom: 'calc(52px + env(safe-area-inset-bottom) + 16px)' }}
       >
         <Plus size={28} strokeWidth={2.4} />
       </motion.button>
@@ -268,13 +268,13 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
       {/* 条目操作 Action Sheet */}
       <BottomSheet open={actionEntry !== null} onClose={() => setActionEntry(null)} maxHeight="60%">
         <div className="px-4 pb-3 pt-1">
-          <div className="mb-2 truncate px-2 text-center text-[14px] text-[#8E8E93]">
+          <div className="mb-2 truncate px-2 text-center text-[14px] text-ink-2">
             {actionEntry?.food_name}
           </div>
           <div className="ios-card mb-3">
             <button
               type="button"
-              className="ios-row w-full justify-center text-[17px] text-[#007AFF] active:bg-[#F2F2F7]"
+              className="ios-row w-full justify-center text-[17px] text-brand active:bg-grouped"
               onClick={() => {
                 const en = actionEntry
                 setActionEntry(null)
@@ -286,7 +286,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
             <div className="ios-separator" />
             <button
               type="button"
-              className="ios-row w-full justify-center text-[17px] text-[#FF3B30] active:bg-[#F2F2F7]"
+              className="ios-row w-full justify-center text-[17px] text-danger active:bg-grouped"
               onClick={() => {
                 if (actionEntry) void handleDelete(actionEntry)
               }}
@@ -296,7 +296,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
           </div>
           <button
             type="button"
-            className="ios-card flex h-[50px] w-full items-center justify-center text-[17px] font-semibold text-[#007AFF] active:bg-[#F2F2F7]"
+            className="ios-card flex h-[52px] w-full items-center justify-center text-[17px] font-semibold text-brand active:bg-grouped"
             onClick={() => setActionEntry(null)}
           >
             取消
