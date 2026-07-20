@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
+import { Share } from 'lucide-react'
+import ExportSheet from '@/components/ExportSheet'
 import LatestStatCard from '@/components/LatestStatCard'
 import TrendChartCard from '@/components/TrendChartCard'
 import { useMetricTrend } from '@/hooks/useMetricTrend'
@@ -30,6 +32,7 @@ export default function TrendsPage() {
   const weight = useMetricTrend('weight_kg')
   const waist = useMetricTrend('waist_cm')
   const [range, setRange] = useState<RangeKey>('30d')
+  const [exportOpen, setExportOpen] = useState(false)
 
   const days = RANGES.find((r) => r.key === range)?.days ?? null
 
@@ -59,9 +62,19 @@ export default function TrendsPage() {
   return (
     <div className="flex h-full flex-col">
       <header className="safe-top shrink-0 px-4 pb-2 pt-2">
-        <h1 className="mt-1 text-[34px] font-bold leading-tight tracking-tight text-ink">
-          趋势
-        </h1>
+        <div className="mt-1 flex items-center justify-between">
+          <h1 className="text-[34px] font-bold leading-tight tracking-tight text-ink">
+            趋势
+          </h1>
+          <button
+            type="button"
+            onClick={() => setExportOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-fill active:bg-fill-press"
+            aria-label="导出数据"
+          >
+            <Share size={18} className="text-ink" />
+          </button>
+        </div>
       </header>
 
       <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-[112px]">
@@ -187,6 +200,8 @@ export default function TrendsPage() {
           </>
         )}
       </main>
+
+      <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} />
     </div>
   )
 }
