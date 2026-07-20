@@ -18,28 +18,33 @@ const parseOrNull = (s: string): number | null => {
   return Number.isFinite(v) && v >= 0 ? Math.round(v * 100) / 100 : null
 }
 
-/** 每日指标录入：体重（kg）与总消耗（千卡），允许只填一个 */
+/** 每日指标录入：体重（kg）、腰围（cm）与总消耗（千卡），允许只填部分项 */
 export default function MetricsSheet({ open, entryDate, metric, onClose, onSave }: MetricsSheetProps) {
   const [weight, setWeight] = useState('')
+  const [waist, setWaist] = useState('')
   const [burn, setBurn] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (open) {
       setWeight(metric?.weight_kg != null ? String(metric.weight_kg) : '')
+      setWaist(metric?.waist_cm != null ? String(metric.waist_cm) : '')
       setBurn(metric?.burn_kcal != null ? String(metric.burn_kcal) : '')
       setSaving(false)
     }
   }, [open, metric])
 
-  const hasAnyValue = weight.trim() !== '' || burn.trim() !== ''
-  const hasExisting = metric != null && (metric.weight_kg != null || metric.burn_kcal != null)
+  const hasAnyValue = weight.trim() !== '' || waist.trim() !== '' || burn.trim() !== ''
+  const hasExisting =
+    metric != null &&
+    (metric.weight_kg != null || metric.waist_cm != null || metric.burn_kcal != null)
 
   const handleSave = async () => {
     if (saving) return
     setSaving(true)
     const ok = await onSave({
       weight_kg: parseOrNull(weight),
+      waist_cm: parseOrNull(waist),
       burn_kcal: parseOrNull(burn),
     })
     setSaving(false)
@@ -49,13 +54,13 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
   const handleClear = async () => {
     if (saving) return
     setSaving(true)
-    const ok = await onSave({ weight_kg: null, burn_kcal: null })
+    const ok = await onSave({ weight_kg: null, waist_cm: null, burn_kcal: null })
     setSaving(false)
     if (ok) onClose()
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} maxHeight="72%">
+    <BottomSheet open={open} onClose={onClose} maxHeight="82%">
       <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-1">
         <div className="w-9" />
         <div className="text-[17px] font-semibold text-ink">
@@ -80,6 +85,21 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
               onChange={(e) => setWeight(e.target.value)}
               placeholder="—"
               aria-label="体重（千克）"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step={0.1}
+              className="tnum w-28 bg-transparent text-right text-[16px] text-ink outline-none placeholder:text-ink-3"
+            />
+          </div>
+          <div className="ios-separator" />
+          <div className="ios-row gap-3">
+            <div className="flex-1 text-[16px] text-ink">腰围（cm）</div>
+            <input
+              value={waist}
+              onChange={(e) => setWaist(e.target.value)}
+              placeholder="—"
+              aria-label="腰围（厘米）"
               type="number"
               inputMode="decimal"
               min={0}
@@ -123,7 +143,7 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
           </button>
         )}
         <p className="mt-3 text-center text-[12px] text-ink-2">
-          可以只填一项，留空的项不保存
+          可以只填部分项，留空的项不保存
         </p>
       </div>
       <div className="safe-bottom-pad shrink-0" />

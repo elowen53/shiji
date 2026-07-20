@@ -89,7 +89,8 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
 
   const handleSaveMetric = async (input: MetricInput) => {
     const ok = await saveMetric(input)
-    const cleared = input.weight_kg == null && input.burn_kcal == null
+    const cleared =
+      input.weight_kg == null && input.waist_cm == null && input.burn_kcal == null
     toast(
       ok ? (cleared ? '已清除' : '已保存') : '保存失败，请检查网络',
       ok ? 'success' : 'error',
@@ -190,39 +191,42 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
           </div>
         </section>
 
-        {/* 今日指标：体重 + 总消耗，点按录入 */}
+        {/* 今日指标：体重 + 腰围 + 总消耗，点按录入 */}
         <button
           type="button"
           onClick={() => setMetricsOpen(true)}
-          className="ios-card mb-5 flex w-full items-center gap-3 px-4 py-3 text-left active:bg-grouped"
+          className="ios-card mb-5 block w-full px-4 py-3 text-left active:bg-grouped"
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-success/15">
-            <Scale size={18} className="text-success" />
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-success/15">
+              <Scale size={18} className="text-success" />
+            </div>
+            <div className="min-w-0 flex-1 text-[15px] font-medium text-ink">今日指标</div>
+            <ChevronRight size={16} className="shrink-0 text-ink-3" />
           </div>
-          <div className="min-w-0 flex-1 text-[15px] font-medium text-ink">今日指标</div>
-          <div className="tnum shrink-0 text-[15px] text-ink">
-            <span className="mr-1 text-[12px] font-normal text-ink-2">体重</span>
-            {metric?.weight_kg != null ? (
-              <>
-                {fmtMacro(metric.weight_kg)}
-                <span className="text-[12px] font-normal text-ink-2"> kg</span>
-              </>
-            ) : (
-              <span className="text-ink-3">—</span>
-            )}
+          <div className="mt-2 flex">
+            {(
+              [
+                ['体重', metric?.weight_kg, 'kg'],
+                ['腰围', metric?.waist_cm, 'cm'],
+                ['消耗', metric?.burn_kcal, '千卡'],
+              ] as const
+            ).map(([label, v, unit]) => (
+              <div key={label} className="flex-1">
+                <div className="text-[12px] text-ink-2">{label}</div>
+                <div className="tnum mt-[1px] text-[15px] font-medium text-ink">
+                  {v != null ? (
+                    <>
+                      {unit === '千卡' ? fmtKcal(v) : fmtMacro(v)}
+                      <span className="text-[12px] font-normal text-ink-2"> {unit}</span>
+                    </>
+                  ) : (
+                    <span className="text-ink-3">—</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="tnum shrink-0 text-[15px] text-ink">
-            <span className="mr-1 text-[12px] font-normal text-ink-2">消耗</span>
-            {metric?.burn_kcal != null ? (
-              <>
-                {fmtKcal(metric.burn_kcal)}
-                <span className="text-[12px] font-normal text-ink-2"> 千卡</span>
-              </>
-            ) : (
-              <span className="text-ink-3">—</span>
-            )}
-          </div>
-          <ChevronRight size={16} className="shrink-0 text-ink-3" />
         </button>
 
         {/* 记录列表 */}

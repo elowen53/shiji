@@ -1,18 +1,10 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import {
-  Area,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import { useWeightTrend, type WeightPoint } from '@/hooks/useWeightTrend'
+import LatestStatCard from '@/components/LatestStatCard'
+import TrendChartCard from '@/components/TrendChartCard'
+import { useMetricTrend } from '@/hooks/useMetricTrend'
 import { addDays, formatDisplay, todayKey } from '@/lib/date'
-import { fmtMacro } from '@/lib/format'
+import { withMovingAverage, type TrendPoint } from '@/lib/trend'
 
 type RangeKey = '30d' | '90d' | 'all'
 
@@ -22,72 +14,53 @@ const RANGES: { key: RangeKey; label: string; days: number | null }[] = [
   { key: 'all', label: '全部', days: null },
 ]
 
-/** 图表用色：引用语义 token（SVG 属性支持 CSS var） */
-const ACCENT = 'rgb(var(--color-brand))'
-const TICK_INK = 'rgb(var(--color-ink-2))'
-
-/** 图表数据点：单日体重 + 7 日移动平均（null 表示尚未积累 3 条） */
-type ChartPoint = WeightPoint & { ma: number | null }
-
-/** X 轴标签："2026-07-17" → "7/17" */
-const fmtX = (date: string) =>
-  `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`
-
-/** 悬浮提示：iOS 风格深色小胶囊，单日值与 7 日均线同显 */
-function TrendTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean
-  payload?: { payload: ChartPoint }[]
-}) {
-  if (!active || !payload || payload.length === 0) return null
-  const p = payload[0]?.payload
-  if (!p) return null
-  return (
-    <div className="tnum rounded-lg bg-ink/90 px-3 py-2 text-[12px] font-medium text-white shadow-lg">
-      {formatDisplay(p.date)} · {fmtMacro(p.weight)} kg
-      {p.ma != null && <span className="text-white/70"> · 均值 {fmtMacro(p.ma)}</span>}
-    </div>
-  )
+/** 最新值与较上次差值 */
+function latestDelta(points: TrendPoint[]): { value: number; date: string; delta: number | null } | null {
+  const latest = points.length > 0 ? points[points.length - 1] : undefined
+  const prev = points.length > 1 ? points[points.length - 2] : undefined
+  if (!latest) return null
+  return {
+    value: latest.value,
+    date: latest.date,
+    delta: prev ? Math.round((latest.value - prev.value) * 10) / 10 : null,
+  }
 }
 
 export default function TrendsPage() {
-  const { points, loading, error, refresh } = useWeightTrend()
+  const weight = useMetricTrend('weight_kg')
+  const waist = useMetricTrend('waist_cm')
   const [range, setRange] = useState<RangeKey>('30d')
 
   const days = RANGES.find((r) => r.key === range)?.days ?? null
 
-  /** 7 日移动平均：每个点取该点及之前最多 7 条均值；第 3 条记录起才绘制 */
-  const withMA = useMemo(
-    () =>
-      points.map((p, i) => {
-        if (i < 2) return { ...p, ma: null as number | null }
-        const start = Math.max(0, i - 6)
-        const slice = points.slice(start, i + 1)
-        const ma = slice.reduce((s, x) => s + x.weight, 0) / slice.length
-        return { ...p, ma: Math.round(ma * 100) / 100 }
-      }),
-    [points],
-  )
-
-  /** 前端按区间过滤（切换分段不重复请求） */
-  const filtered = useMemo(() => {
+  /** 前端按区间过滤（切换分段不重复请求；均线先在全量序列上计算） */
+  const filterByRange = (points: TrendPoint[]) => {
+    const withMA = withMovingAverage(points)
     if (days == null) return withMA
     const cutoff = addDays(todayKey(), -(days - 1))
     return withMA.filter((p) => p.date >= cutoff)
-  }, [withMA, days])
+  }
 
-  const latest = points.length > 0 ? points[points.length - 1] : undefined
-  const prev = points.length > 1 ? points[points.length - 2] : undefined
-  const delta =
-    latest && prev ? Math.round((latest.weight - prev.weight) * 10) / 10 : null
+  const weightData = useMemo(() => filterByRange(weight.points), [weight.points, days])
+  const waistData = useMemo(() => filterByRange(waist.points), [waist.points, days])
+
+  const weightStat = latestDelta(weight.points)
+  const waistStat = latestDelta(waist.points)
+
+  const loading = weight.loading || waist.loading
+  const error = weight.error ?? waist.error
+  const bothEmpty = weight.points.length === 0 && waist.points.length === 0
+
+  const retry = () => {
+    void weight.refresh()
+    void waist.refresh()
+  }
 
   return (
     <div className="flex h-full flex-col">
       <header className="safe-top shrink-0 px-4 pb-2 pt-2">
         <h1 className="mt-1 text-[34px] font-bold leading-tight tracking-tight text-ink">
-          体重趋势
+          趋势
         </h1>
       </header>
 
@@ -98,63 +71,53 @@ export default function TrendsPage() {
               <div className="mb-2 h-10 w-28 rounded bg-fill" />
               <div className="h-3 w-20 rounded bg-fill" />
             </div>
+            <div className="ios-card mb-4 animate-pulse px-4 py-4">
+              <div className="h-[240px] rounded-xl bg-fill" />
+            </div>
             <div className="ios-card animate-pulse px-4 py-4">
               <div className="h-[240px] rounded-xl bg-fill" />
             </div>
           </>
         ) : error ? (
           <div className="ios-card px-4 py-10 text-center">
-            <p className="mb-4 text-[15px] text-ink-2">加载失败:{error}</p>
+            <p className="mb-4 text-[15px] text-ink-2">加载失败：{error}</p>
             <button
               type="button"
-              onClick={() => void refresh()}
+              onClick={retry}
               className="rounded-full bg-brand px-5 py-2 text-[15px] font-medium text-white active:bg-brand-press"
             >
               重试
             </button>
           </div>
-        ) : points.length === 0 ? (
+        ) : bothEmpty ? (
           <div className="px-4 py-16 text-center">
             <div className="mb-4 text-[52px] leading-none">⚖️</div>
-            <div className="mb-1 text-[17px] font-semibold text-ink">
-              还没有体重记录
-            </div>
+            <div className="mb-1 text-[17px] font-semibold text-ink">还没有指标记录</div>
             <div className="text-[14px] text-ink-2">
-              去「记录」页点今日指标，添加今天的体重
+              去「记录」页点今日指标，添加体重或腰围
             </div>
           </div>
         ) : (
           <>
-            {/* 最新体重 */}
-            {latest && (
-              <section className="ios-card mb-4 px-4 py-4">
-                <div className="flex items-end justify-between">
-                  <div>
-                    <div className="tnum text-[40px] font-bold leading-none tracking-tight text-ink">
-                      {fmtMacro(latest.weight)}
-                      <span className="ml-1 text-[16px] font-normal text-ink-2">
-                        kg
-                      </span>
-                    </div>
-                    <div className="mt-1.5 text-[13px] text-ink-2">
-                      {formatDisplay(latest.date)} 记录
-                    </div>
-                  </div>
-                  {delta != null && delta !== 0 && (
-                    <div
-                      className={`tnum mb-1 text-[14px] font-medium ${
-                        delta > 0 ? 'text-danger' : 'text-success'
-                      }`}
-                    >
-                      较上次 {delta > 0 ? '+' : ''}
-                      {delta.toFixed(1)} kg
-                    </div>
-                  )}
-                </div>
-              </section>
+            {/* 最新值大卡（体重 / 腰围） */}
+            {weightStat && (
+              <LatestStatCard
+                value={weightStat.value}
+                unit="kg"
+                dateLabel={`${formatDisplay(weightStat.date)} 记录`}
+                delta={weightStat.delta}
+              />
+            )}
+            {waistStat && (
+              <LatestStatCard
+                value={waistStat.value}
+                unit="cm"
+                dateLabel={`${formatDisplay(waistStat.date)} 记录`}
+                delta={waistStat.delta}
+              />
             )}
 
-            {/* 区间分段控件 */}
+            {/* 区间分段控件：联动两张图 */}
             <div className="mb-4 flex rounded-full bg-fill p-[3px]">
               {RANGES.map((r) => {
                 const selected = range === r.key
@@ -186,96 +149,55 @@ export default function TrendsPage() {
               })}
             </div>
 
-            {/* 折线图 */}
-            <section className="ios-card px-2 py-4">
-              {filtered.length === 0 ? (
-                <div className="py-16 text-center text-[14px] text-ink-2">
-                  该区间暂无体重记录
-                </div>
-              ) : (
-              <>
-                {/* 极简图例 */}
-                <div className="mb-1 flex items-center justify-end gap-4 px-3">
-                  <span className="flex items-center gap-1.5 text-[12px] text-ink-2">
-                    <span className="h-[3px] w-4 rounded-full bg-brand/40" />
-                    单日
-                  </span>
-                  <span className="flex items-center gap-1.5 text-[12px] text-ink-2">
-                    <span className="h-[3px] w-4 rounded-full bg-brand" />7 日均值
-                  </span>
-                </div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart
-                    data={filtered}
-                    margin={{ top: 8, right: 16, bottom: 0, left: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="weightFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={ACCENT} stopOpacity={0.18} />
-                        <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      vertical={false}
-                      stroke="rgba(60, 60, 67, 0.08)"
-                    />
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={fmtX}
-                      tick={{ fontSize: 11, fill: TICK_INK }}
-                      axisLine={false}
-                      tickLine={false}
-                      minTickGap={36}
-                    />
-                    <YAxis
-                      domain={[
-                        (dataMin: number) => Math.floor(dataMin - 1),
-                        (dataMax: number) => Math.ceil(dataMax + 1),
-                      ]}
-                      tick={{ fontSize: 11, fill: TICK_INK }}
-                      axisLine={false}
-                      tickLine={false}
-                      width={40}
-                      tickFormatter={(v: number) => v.toFixed(1)}
-                    />
-                    <Tooltip
-                      content={<TrendTooltip />}
-                      cursor={{ stroke: 'rgba(60,60,67,0.2)', strokeWidth: 1 }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="weight"
-                      stroke="none"
-                      fill="url(#weightFill)"
-                    />
-                    {/* 单日值：细线淡色小点 */}
-                    <Line
-                      type="monotone"
-                      dataKey="weight"
-                      stroke={ACCENT}
-                      strokeOpacity={0.35}
-                      strokeWidth={1.5}
-                      dot={{ r: 2, fill: ACCENT, fillOpacity: 0.45, strokeWidth: 0 }}
-                      activeDot={{ r: 4, fill: ACCENT, strokeWidth: 0 }}
-                    />
-                    {/* 7 日移动平均：加粗主色 */}
-                    <Line
-                      type="monotone"
-                      dataKey="ma"
-                      stroke={ACCENT}
-                      strokeWidth={2.5}
-                      dot={false}
-                      activeDot={{ r: 4.5, fill: ACCENT, strokeWidth: 0 }}
-                      connectNulls
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </>
-              )}
-            </section>
+            {/* 体重趋势 */}
+            {weight.points.length > 0 ? (
+              <div className="mb-4">
+                <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">体重</div>
+                <TrendChartCard
+                  data={weightData}
+                  unit="kg"
+                  emptyText="该区间暂无体重记录"
+                />
+              </div>
+            ) : (
+              <EmptyMetricCard
+                emoji="⚖️"
+                text="还没有体重记录"
+                hint="去「记录」页点今日指标，添加体重"
+              />
+            )}
+
+            {/* 腰围趋势 */}
+            {waist.points.length > 0 ? (
+              <div>
+                <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">腰围</div>
+                <TrendChartCard
+                  data={waistData}
+                  unit="cm"
+                  emptyText="该区间暂无腰围记录"
+                />
+              </div>
+            ) : (
+              <EmptyMetricCard
+                emoji="📏"
+                text="还没有腰围记录"
+                hint="去「记录」页点今日指标，添加腰围"
+              />
+            )}
           </>
         )}
       </main>
+    </div>
+  )
+}
+
+/** 单指标空态卡：不影响其他指标卡显示 */
+function EmptyMetricCard({ emoji, text, hint }: { emoji: string; text: string; hint: string }) {
+  return (
+    <div className="ios-card mb-4 px-4 py-8 text-center">
+      <div className="mb-2 text-[32px] leading-none">{emoji}</div>
+      <div className="mb-1 text-[15px] font-semibold text-ink">{text}</div>
+      <div className="text-[13px] text-ink-2">{hint}</div>
     </div>
   )
 }

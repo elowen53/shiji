@@ -69,6 +69,7 @@ export function useMetrics(entryDate: string): MetricsApi {
           {
             entry_date: entryDate,
             weight_kg: input.weight_kg,
+            waist_cm: input.waist_cm,
             burn_kcal: input.burn_kcal,
             updated_at: new Date().toISOString(),
           },
