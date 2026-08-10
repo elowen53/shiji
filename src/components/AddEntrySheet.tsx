@@ -151,7 +151,7 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
                     数量（单位：{selected.unit}）
                   </div>
                   <div className="mb-5 flex justify-center">
-                    <Stepper value={quantity} onChange={setQuantity} step={0.5} min={0.5} />
+                    <Stepper value={quantity} onChange={setQuantity} min={0.1} unit={selected.unit} />
                   </div>
 
                   {/* 实时折算预览 */}

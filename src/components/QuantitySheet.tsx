@@ -57,7 +57,7 @@ export default function QuantitySheet({ entry, onClose, onSave }: QuantitySheetP
             数量（单位：{entry.unit}）
           </div>
           <div className="mb-5 flex justify-center">
-            <Stepper value={quantity} onChange={setQuantity} step={0.5} min={0.5} />
+            <Stepper value={quantity} onChange={setQuantity} min={0.1} unit={entry.unit} />
           </div>
 
           <div className="ios-card mb-5 px-4 py-4">
