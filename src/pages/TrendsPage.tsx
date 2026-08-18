@@ -4,9 +4,10 @@ import { Share } from 'lucide-react'
 import ExportSheet from '@/components/ExportSheet'
 import LatestStatCard from '@/components/LatestStatCard'
 import TrendChartCard from '@/components/TrendChartCard'
+import WeightSummaryCard from '@/components/WeightSummaryCard'
 import { useMetricTrend } from '@/hooks/useMetricTrend'
 import { addDays, formatDisplay, todayKey } from '@/lib/date'
-import { withMovingAverage, type TrendPoint } from '@/lib/trend'
+import { getWeeklyTrendSummary, withMovingAverage, type TrendPoint } from '@/lib/trend'
 
 type RangeKey = '30d' | '90d' | 'all'
 
@@ -28,6 +29,14 @@ function latestDelta(points: TrendPoint[]): { value: number; date: string; delta
   }
 }
 
+/** 前端按区间过滤（均线先在全量序列上计算，切换分段不重复请求）。 */
+function filterByRange(points: TrendPoint[], days: number | null) {
+  const withMA = withMovingAverage(points)
+  if (days == null) return withMA
+  const cutoff = addDays(todayKey(), -(days - 1))
+  return withMA.filter((point) => point.date >= cutoff)
+}
+
 export default function TrendsPage() {
   const weight = useMetricTrend('weight_kg')
   const waist = useMetricTrend('waist_cm')
@@ -36,19 +45,12 @@ export default function TrendsPage() {
 
   const days = RANGES.find((r) => r.key === range)?.days ?? null
 
-  /** 前端按区间过滤（切换分段不重复请求；均线先在全量序列上计算） */
-  const filterByRange = (points: TrendPoint[]) => {
-    const withMA = withMovingAverage(points)
-    if (days == null) return withMA
-    const cutoff = addDays(todayKey(), -(days - 1))
-    return withMA.filter((p) => p.date >= cutoff)
-  }
-
-  const weightData = useMemo(() => filterByRange(weight.points), [weight.points, days])
-  const waistData = useMemo(() => filterByRange(waist.points), [waist.points, days])
+  const weightData = useMemo(() => filterByRange(weight.points, days), [weight.points, days])
+  const waistData = useMemo(() => filterByRange(waist.points, days), [waist.points, days])
 
   const weightStat = latestDelta(weight.points)
   const waistStat = latestDelta(waist.points)
+  const weightWeekly = useMemo(() => getWeeklyTrendSummary(weight.points), [weight.points])
 
   const loading = weight.loading || waist.loading
   const error = weight.error ?? waist.error
@@ -113,12 +115,11 @@ export default function TrendsPage() {
         ) : (
           <>
             {/* 最新值大卡（体重 / 腰围） */}
-            {weightStat && (
-              <LatestStatCard
+            {weightStat && weightWeekly && (
+              <WeightSummaryCard
                 value={weightStat.value}
-                unit="kg"
                 dateLabel={`${formatDisplay(weightStat.date)} 记录`}
-                delta={weightStat.delta}
+                weekly={weightWeekly}
               />
             )}
             {waistStat && (

@@ -78,6 +78,11 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
   /** 蛋白质 g/kg：当日蛋白质总量 ÷ 最近体重；无体重数据为 null */
   const proteinPerKg =
     latestWeight != null && latestWeight > 0 ? totals.protein / latestWeight : null
+  /** 蛋白质目标：所选日期最近一次有效体重 × 2 g/kg，避免历史日期引用未来体重。 */
+  const proteinGoal =
+    latestWeight != null && latestWeight > 0 ? latestWeight * 2 : null
+  const proteinCompletion =
+    proteinGoal != null ? Math.round((totals.protein / proteinGoal) * 100) : null
 
   const handleCopyPrevDay = async () => {
     if (copying) return
@@ -211,6 +216,36 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
               </div>
             ))}
           </div>
+          {proteinGoal != null && proteinCompletion != null ? (
+            <div className="mt-3 px-1">
+              <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                <span className="font-medium text-ink">蛋白质目标</span>
+                <span className="tnum text-ink-2">
+                  {fmtMacro(totals.protein)} / {fmtMacro(proteinGoal)} g · {proteinCompletion}%
+                </span>
+              </div>
+              <div
+                className="mt-2 h-2 overflow-hidden rounded-full bg-fill"
+                role="progressbar"
+                aria-label="蛋白质目标完成度"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.min(100, Math.max(0, proteinCompletion))}
+              >
+                <div
+                  className="h-full rounded-full bg-brand transition-[width] duration-300"
+                  style={{ width: `${Math.min(100, Math.max(0, proteinCompletion))}%` }}
+                />
+              </div>
+              <div className="tnum mt-1.5 text-[11px] text-ink-2">
+                按最近体重 {fmtMacro(latestWeight!)} kg × 2 g/kg 计算
+              </div>
+            </div>
+          ) : (
+            <div className="mt-3 px-1 text-[12px] text-ink-2">
+              记录体重后生成蛋白质目标（2 g/kg）
+            </div>
+          )}
         </section>
 
         {/* 今日指标：体重 + 腰围 + 总消耗，点按录入 */}
