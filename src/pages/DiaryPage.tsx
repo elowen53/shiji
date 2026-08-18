@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Plus, Scale } from 'lucide-react'
 import AddEntrySheet from '@/components/AddEntrySheet'
@@ -20,6 +20,28 @@ interface DiaryPageProps {
 export default function DiaryPage({ foods }: DiaryPageProps) {
   const { toast } = useToast()
   const [dateKey, setDateKey] = useState(todayKey())
+
+  useEffect(() => {
+    let lastBeijingToday = todayKey()
+
+    const syncAfterResume = () => {
+      if (document.visibilityState === 'hidden') return
+
+      const currentBeijingToday = todayKey()
+      if (currentBeijingToday !== lastBeijingToday) {
+        lastBeijingToday = currentBeijingToday
+        setDateKey(currentBeijingToday)
+      }
+    }
+
+    document.addEventListener('visibilitychange', syncAfterResume)
+    window.addEventListener('pageshow', syncAfterResume)
+    return () => {
+      document.removeEventListener('visibilitychange', syncAfterResume)
+      window.removeEventListener('pageshow', syncAfterResume)
+    }
+  }, [])
+
   const {
     entries,
     loading,
