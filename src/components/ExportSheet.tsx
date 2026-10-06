@@ -104,7 +104,7 @@ export default function ExportSheet({ open, onClose }: ExportSheetProps) {
         </button>
       </div>
 
-      <div className="px-4 pb-4">
+      <div className="no-scrollbar min-h-0 overflow-y-auto px-4 pb-4">
         <div className="ios-card">
           {options.map(({ key, icon: Icon, title, desc, count, countLabel, onExport }, i) => {
             const disabled = loading || count === 0

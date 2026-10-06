@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Sprout } from 'lucide-react'
+import BrandMasthead from '@/components/BrandMasthead'
 import FoodFormSheet from '@/components/FoodFormSheet'
 import { useToast } from '@/lib/toast'
 import type { FoodsApi } from '@/hooks/useFoods'
@@ -36,34 +37,36 @@ export default function FoodsPage({ foodsApi }: FoodsPageProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="safe-top shrink-0 px-4 pb-2 pt-2">
-        <div className="flex h-11 items-center justify-end">
-          <button
-            type="button"
-            onClick={openAdd}
-            className="flex h-9 items-center gap-1 rounded-full bg-brand/10 px-3.5 text-[15px] font-medium text-brand active:bg-brand/20"
-          >
-            <Plus size={17} strokeWidth={2.4} />
-            新增
+      <header className="page-header">
+        <BrandMasthead />
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="mb-1 text-[12px] text-ink-2">熟悉的食物，清楚的营养</p>
+            <h1 className="editorial-title text-[34px] leading-tight text-ink">食物库</h1>
+          </div>
+          <button type="button" onClick={openAdd}
+            className="flex h-11 items-center gap-1.5 rounded-full bg-brand px-4 text-[14px] font-medium text-white active:bg-brand-press">
+            <Plus size={18} strokeWidth={1.8} />新增
           </button>
         </div>
-        <h1 className="mt-1 text-[34px] font-bold leading-tight tracking-tight text-ink">
-          食物库
-        </h1>
       </header>
 
-      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-[112px]">
-        <div className="mb-4 flex h-10 items-center gap-2 rounded-xl bg-fill px-3">
+      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto page-content pb-[112px]">
+        <div className="search-field mb-4">
           <Search size={17} className="shrink-0 text-ink-2" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索"
+            placeholder="搜索食物名称"
             aria-label="搜索食物"
             className="w-full bg-transparent text-[16px] text-ink outline-none placeholder:text-ink-2"
           />
         </div>
 
+        <div className="section-heading">
+          <h2>{query.trim() ? '搜索结果' : '全部食物'}</h2>
+          <span className="tnum text-[11px] font-normal tracking-normal text-ink-2">{filtered.length} 种食物</span>
+        </div>
         {loading ? (
           <div className="ios-card">
             {[0, 1, 2, 3].map((i) => (
@@ -91,8 +94,8 @@ export default function FoodsPage({ foodsApi }: FoodsPageProps) {
             </button>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="px-4 py-14 text-center">
-            <div className="mb-4 text-[52px] leading-none">🥗</div>
+          <div className="empty-state">
+            <div className="empty-symbol"><Sprout size={27} strokeWidth={1.3} /></div>
             <div className="mb-1 text-[17px] font-semibold text-ink">
               {foods.length === 0 ? '食物库还是空的' : '没有匹配的食物'}
             </div>

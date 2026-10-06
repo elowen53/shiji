@@ -15,9 +15,10 @@ interface LatestStatCardProps {
 export default function LatestStatCard({ value, unit, dateLabel, delta }: LatestStatCardProps) {
   return (
     <section className="ios-card mb-4 px-4 py-4">
+      <div className="mb-3 text-[12px] text-ink-2">{unit === 'cm' ? '最新腰围' : '最新记录'}</div>
       <div className="flex items-end justify-between">
         <div>
-          <div className="tnum text-[40px] font-bold leading-none tracking-tight text-ink">
+          <div className="tnum editorial-title text-[42px] leading-none text-brand">
             {fmtMacro(value)}
             <span className="ml-1 text-[16px] font-normal text-ink-2">{unit}</span>
           </div>

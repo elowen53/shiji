@@ -76,7 +76,7 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
         </button>
       </div>
 
-      <div className="px-4 pb-4">
+      <div className="no-scrollbar min-h-0 overflow-y-auto px-4 pb-4">
         <div className="ios-card mb-6">
           <div className="ios-row gap-3">
             <div className="flex-1 text-[16px] text-ink">体重（kg）</div>

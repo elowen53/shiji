@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import ConfigGate from '@/components/ConfigGate'
 import TabBar, { type TabKey } from '@/components/TabBar'
 import DiaryPage from '@/pages/DiaryPage'
@@ -29,30 +29,32 @@ function ConfiguredApp() {
   }
 
   return (
-    <ToastProvider>
-      <div className="app-shell">
-        <div className="relative min-h-0 flex-1">
-          <AnimatePresence mode="wait" initial={false} custom={dirRef.current}>
-            <motion.div
-              key={tab}
-              className="h-full"
-              initial={{ opacity: 0, x: 18 * dirRef.current }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -18 * dirRef.current }}
-              transition={{ type: 'spring', stiffness: 460, damping: 40 }}
-            >
-              {tab === 'diary' ? (
-                <DiaryPage foods={foodsApi.foods} />
-              ) : tab === 'trends' ? (
-                <TrendsPage />
-              ) : (
-                <FoodsPage foodsApi={foodsApi} />
-              )}
-            </motion.div>
-          </AnimatePresence>
+    <MotionConfig reducedMotion="user">
+      <ToastProvider>
+        <div className="app-shell">
+          <div className="relative min-h-0 flex-1">
+            <AnimatePresence mode="wait" initial={false} custom={dirRef.current}>
+              <motion.div
+                key={tab}
+                className="h-full"
+                initial={{ opacity: 0, x: 18 * dirRef.current }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -18 * dirRef.current }}
+                transition={{ type: 'spring', stiffness: 460, damping: 40 }}
+              >
+                {tab === 'diary' ? (
+                  <DiaryPage foods={foodsApi.foods} />
+                ) : tab === 'trends' ? (
+                  <TrendsPage />
+                ) : (
+                  <FoodsPage foodsApi={foodsApi} />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          <TabBar active={tab} onChange={handleTabChange} />
         </div>
-        <TabBar active={tab} onChange={handleTabChange} />
-      </div>
-    </ToastProvider>
+      </ToastProvider>
+    </MotionConfig>
   )
 }

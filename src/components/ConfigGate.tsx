@@ -1,4 +1,4 @@
-import { Database, KeyRound, Link2 } from 'lucide-react'
+import { Sprout, KeyRound, Link2 } from 'lucide-react'
 
 /**
  * 环境变量未配置时展示的引导页，避免白屏报错。
@@ -7,10 +7,11 @@ export default function ConfigGate() {
   return (
     <div className="app-shell items-center justify-center px-8">
       <div className="flex w-full flex-col items-center text-center">
+        <div className="mb-5 text-[11px] tracking-[0.2em] text-brand">食记 · THE DAILY JOURNAL</div>
         <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-[22px] bg-surface shadow-sm">
-          <Database size={36} className="text-brand" strokeWidth={1.6} />
+          <Sprout size={36} className="text-brand" strokeWidth={1.6} />
         </div>
-        <h1 className="mb-2 text-[28px] font-bold tracking-tight text-ink">
+        <h1 className="editorial-title mb-3 text-[28px] text-ink">
           连接你的数据库
         </h1>
         <p className="mb-8 text-[15px] leading-relaxed text-ink-2">

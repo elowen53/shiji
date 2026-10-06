@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Plus, Scale } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Scale, Utensils } from 'lucide-react'
+import BrandMasthead from '@/components/BrandMasthead'
 import AddEntrySheet from '@/components/AddEntrySheet'
 import BottomSheet from '@/components/BottomSheet'
 import EntryRow from '@/components/EntryRow'
@@ -128,62 +129,56 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
   return (
     <div className="flex h-full flex-col">
       {/* 顶部：日期切换 + 大标题 */}
-      <header className="safe-top shrink-0 px-4 pb-2 pt-2">
-        <div className="flex h-11 items-center justify-between">
-          <button
-            type="button"
-            aria-label="前一天"
-            onClick={() => setDateKey((k) => addDays(k, -1))}
-            className="flex h-11 w-11 items-center justify-center rounded-full text-brand active:bg-brand/10"
-          >
-            <ChevronLeft size={26} strokeWidth={2.2} />
-          </button>
-          <div className="text-center">
-            <div className="text-[13px] font-medium text-ink-2">{weekdayLabel(dateKey)}</div>
+      <header className="page-header">
+        <BrandMasthead />
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="mb-1 text-[12px] tracking-wide text-ink-2">
+              {weekdayLabel(dateKey)} · {isToday(dateKey) ? '今日饮食' : '饮食记录'}
+            </div>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.h1
+                key={dateKey}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.16 }}
+                className="editorial-title whitespace-nowrap text-[clamp(24px,8vw,34px)] leading-tight text-ink"
+              >
+                {formatDisplay(dateKey)}
+              </motion.h1>
+            </AnimatePresence>
           </div>
-          <button
-            type="button"
-            aria-label="后一天"
-            onClick={() => setDateKey((k) => addDays(k, 1))}
-            className="flex h-11 w-11 items-center justify-center rounded-full text-brand active:bg-brand/10"
-          >
-            <ChevronRight size={26} strokeWidth={2.2} />
-          </button>
-        </div>
-        <div className="mt-1 flex items-end justify-between">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.h1
-              key={dateKey}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.16 }}
-              className="text-[34px] font-bold leading-tight tracking-tight text-ink"
-            >
-              {formatDisplay(dateKey)}
-            </motion.h1>
-          </AnimatePresence>
-          {!isToday(dateKey) && (
-            <button
-              type="button"
-              onClick={() => setDateKey(todayKey())}
-              className="mb-1 rounded-full bg-brand/10 px-3.5 py-1.5 text-[14px] font-medium text-brand active:bg-brand/20"
-            >
-              今天
+          <div className="flex items-center gap-1.5">
+            {!isToday(dateKey) && (
+              <button type="button" onClick={() => setDateKey(todayKey())}
+                className="h-11 rounded-full px-2 text-[13px] font-medium text-brand active:bg-brand/10">
+                今天
+              </button>
+            )}
+            <button type="button" aria-label="前一天" onClick={() => setDateKey((k) => addDays(k, -1))} className="icon-button">
+              <ChevronLeft size={20} strokeWidth={1.7} />
             </button>
-          )}
+            <button type="button" aria-label="后一天" onClick={() => setDateKey((k) => addDays(k, 1))} className="icon-button">
+              <ChevronRight size={20} strokeWidth={1.7} />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* 内容区 */}
-      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-[152px]">
+      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto page-content pb-[160px]">
         {/* 当日汇总卡片 */}
-        <section className="ios-card mb-5 px-4 py-4">
-          <div className="mb-3 text-center">
-            <div className="tnum text-[44px] font-bold leading-none tracking-tight text-ink">
-              {fmtKcal(totals.kcal)}
+        <section className="nutrition-card mb-4">
+          <div className="mb-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[13px] font-medium text-brand">{isToday(dateKey) ? '今日总热量' : '当日总热量'}</span>
+              <span className="text-[9px] tracking-[0.16em] text-brand/70" aria-hidden="true">DAILY INTAKE</span>
             </div>
-            <div className="mt-1 text-[13px] text-ink-2">今日总热量（千卡）</div>
+            <div className="flex items-baseline gap-2.5">
+              <span className="tnum calorie-number">{fmtKcal(totals.kcal)}</span>
+              <span className="text-[13px] text-ink-2">千卡</span>
+            </div>
             {metric?.burn_kcal != null && (
               <div className="tnum mt-1.5 text-[13px] text-ink-2">
                 消耗 {fmtKcal(metric.burn_kcal)} 千卡 · 净摄入{' '}
@@ -191,7 +186,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
               </div>
             )}
           </div>
-          <div className="flex rounded-xl bg-grouped py-3">
+          <div className="macro-grid">
             {(
               [
                 [
@@ -205,7 +200,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
               ] as const
             ).map(([label, v, colorClass, sub]) => (
               <div key={label} className="flex-1 text-center">
-                <div className={`tnum text-[18px] font-semibold ${colorClass}`}>
+                <div className={`tnum text-[22px] font-medium ${colorClass}`}>
                   {fmtMacro(v)}
                   <span className="text-[12px] font-normal text-ink-2"> g</span>
                 </div>
@@ -225,7 +220,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
                 </span>
               </div>
               <div
-                className="mt-2 h-2 overflow-hidden rounded-full bg-fill"
+                className="mt-2 h-1.5 overflow-hidden rounded-full bg-brand/10"
                 role="progressbar"
                 aria-label="蛋白质目标完成度"
                 aria-valuemin={0}
@@ -252,16 +247,16 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         <button
           type="button"
           onClick={() => setMetricsOpen(true)}
-          className="ios-card mb-5 block w-full px-4 py-3 text-left active:bg-grouped"
+          className="ios-card block w-full px-4 py-3 text-left active:bg-grouped"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-success/15">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10">
               <Scale size={18} className="text-success" />
             </div>
-            <div className="min-w-0 flex-1 text-[15px] font-medium text-ink">今日指标</div>
+            <div className="min-w-0 flex-1 text-[14px] font-medium text-ink">今日指标</div>
             <ChevronRight size={16} className="shrink-0 text-ink-3" />
           </div>
-          <div className="mt-2 flex">
+          <div className="mt-3 flex">
             {(
               [
                 ['体重', metric?.weight_kg, 'kg'],
@@ -271,7 +266,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
             ).map(([label, v, unit]) => (
               <div key={label} className="flex-1">
                 <div className="text-[12px] text-ink-2">{label}</div>
-                <div className="tnum mt-[1px] text-[15px] font-medium text-ink">
+                <div className="tnum mt-1 text-[20px] font-medium text-ink">
                   {v != null ? (
                     <>
                       {unit === '千卡' ? fmtKcal(v) : fmtMacro(v)}
@@ -286,6 +281,10 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
           </div>
         </button>
 
+        <div className="section-heading">
+          <h2>饮食记录</h2>
+          <span className="tnum text-[11px] font-normal tracking-normal text-ink-2">{entries.length} 条记录</span>
+        </div>
         {/* 记录列表 */}
         {loading ? (
           <div className="ios-card">
@@ -314,8 +313,8 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
             </button>
           </div>
         ) : entries.length === 0 ? (
-          <div className="px-4 py-14 text-center">
-            <div className="mb-4 text-[52px] leading-none">🍚</div>
+          <div className="empty-state">
+            <div className="empty-symbol"><Utensils size={25} strokeWidth={1.3} /></div>
             <div className="mb-1 text-[17px] font-semibold text-ink">
               {isToday(dateKey) ? '今天还没有记录' : '这一天没有记录'}
             </div>
@@ -359,10 +358,11 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         onClick={() => setAddOpen(true)}
         whileTap={{ scale: 0.88 }}
         transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-        className="absolute right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lg shadow-brand/30"
-        style={{ bottom: 'calc(52px + env(safe-area-inset-bottom) + 16px)' }}
+        className="absolute right-5 z-30 flex h-14 items-center justify-center gap-2 rounded-full bg-brand px-5 text-white shadow-lg shadow-brand/20"
+        style={{ bottom: 'calc(68px + env(safe-area-inset-bottom) + 16px)' }}
       >
-        <Plus size={28} strokeWidth={2.4} />
+        <Plus size={21} strokeWidth={1.8} />
+        <span className="text-[14px] font-medium">记一笔</span>
       </motion.button>
 
       <AddEntrySheet

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Share } from 'lucide-react'
+import { Share, ChartNoAxesCombined, Ruler, Scale } from 'lucide-react'
+import BrandMasthead from '@/components/BrandMasthead'
 import ExportSheet from '@/components/ExportSheet'
 import LatestStatCard from '@/components/LatestStatCard'
 import TrendChartCard from '@/components/TrendChartCard'
@@ -63,23 +64,20 @@ export default function TrendsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="safe-top shrink-0 px-4 pb-2 pt-2">
-        <div className="mt-1 flex items-center justify-between">
-          <h1 className="text-[34px] font-bold leading-tight tracking-tight text-ink">
-            趋势
-          </h1>
-          <button
-            type="button"
-            onClick={() => setExportOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-fill active:bg-fill-press"
-            aria-label="导出数据"
-          >
-            <Share size={18} className="text-ink" />
+      <header className="page-header">
+        <BrandMasthead />
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="mb-1 text-[12px] text-ink-2">在日常里，看见一点点改变</p>
+            <h1 className="editorial-title text-[34px] leading-tight text-ink">趋势</h1>
+          </div>
+          <button type="button" onClick={() => setExportOpen(true)} className="icon-button" aria-label="导出数据">
+            <Share size={18} strokeWidth={1.7} />
           </button>
         </div>
       </header>
 
-      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-[112px]">
+      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto page-content pb-[112px]">
         {loading ? (
           <>
             <div className="ios-card mb-4 animate-pulse px-4 py-4">
@@ -105,8 +103,8 @@ export default function TrendsPage() {
             </button>
           </div>
         ) : bothEmpty ? (
-          <div className="px-4 py-16 text-center">
-            <div className="mb-4 text-[52px] leading-none">⚖️</div>
+          <div className="empty-state">
+            <div className="empty-symbol"><ChartNoAxesCombined size={27} strokeWidth={1.3} /></div>
             <div className="mb-1 text-[17px] font-semibold text-ink">还没有指标记录</div>
             <div className="text-[14px] text-ink-2">
               去「记录」页点今日指标，添加体重或腰围
@@ -132,7 +130,7 @@ export default function TrendsPage() {
             )}
 
             {/* 区间分段控件：联动两张图 */}
-            <div className="mb-4 flex rounded-full bg-fill p-[3px]">
+            <div className="mb-5 flex rounded-full border border-brand/10 bg-fill/60 p-1">
               {RANGES.map((r) => {
                 const selected = range === r.key
                 return (
@@ -140,20 +138,20 @@ export default function TrendsPage() {
                     key={r.key}
                     type="button"
                     onClick={() => setRange(r.key)}
-                    className="relative h-8 flex-1 rounded-full text-[13px] font-medium active:opacity-70"
+                    className="relative h-11 flex-1 rounded-full text-[13px] font-medium active:opacity-70"
                     style={{ minHeight: 32 }}
                     aria-pressed={selected}
                   >
                     {selected && (
                       <motion.span
                         layoutId="range-pill"
-                        className="absolute inset-0 rounded-full bg-surface shadow-sm"
+                        className="absolute inset-0 rounded-full bg-brand shadow-sm"
                         transition={{ type: 'spring', stiffness: 500, damping: 38 }}
                       />
                     )}
                     <span
                       className={`relative z-10 ${
-                        selected ? 'text-ink' : 'text-ink-2'
+                        selected ? 'text-white' : 'text-ink-2'
                       }`}
                     >
                       {r.label}
@@ -175,7 +173,7 @@ export default function TrendsPage() {
               </div>
             ) : (
               <EmptyMetricCard
-                emoji="⚖️"
+                kind="weight"
                 text="还没有体重记录"
                 hint="去「记录」页点今日指标，添加体重"
               />
@@ -193,7 +191,7 @@ export default function TrendsPage() {
               </div>
             ) : (
               <EmptyMetricCard
-                emoji="📏"
+                kind="waist"
                 text="还没有腰围记录"
                 hint="去「记录」页点今日指标，添加腰围"
               />
@@ -208,10 +206,10 @@ export default function TrendsPage() {
 }
 
 /** 单指标空态卡：不影响其他指标卡显示 */
-function EmptyMetricCard({ emoji, text, hint }: { emoji: string; text: string; hint: string }) {
+function EmptyMetricCard({ kind, text, hint }: { kind: 'weight' | 'waist'; text: string; hint: string }) {
   return (
     <div className="ios-card mb-4 px-4 py-8 text-center">
-      <div className="mb-2 text-[32px] leading-none">{emoji}</div>
+      <div className="empty-symbol">{kind === 'weight' ? <Scale size={24} strokeWidth={1.3} /> : <Ruler size={24} strokeWidth={1.3} />}</div>
       <div className="mb-1 text-[15px] font-semibold text-ink">{text}</div>
       <div className="text-[13px] text-ink-2">{hint}</div>
     </div>

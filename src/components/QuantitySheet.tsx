@@ -52,7 +52,7 @@ export default function QuantitySheet({ entry, onClose, onSave }: QuantitySheetP
       </div>
 
       {entry && (
-        <div className="px-4 pb-4">
+        <div className="no-scrollbar min-h-0 overflow-y-auto px-4 pb-4">
           <div className="mb-4 text-center text-[14px] text-ink-2">
             数量（单位：{entry.unit}）
           </div>

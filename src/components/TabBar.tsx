@@ -17,9 +17,9 @@ const TABS: { key: TabKey; label: string; icon: typeof BookOpenText }[] = [
 /** iOS 风格毛玻璃底部 Tab 栏（含安全区 padding） */
 export default function TabBar({ active, onChange }: TabBarProps) {
   return (
-    <div className="hairline-t absolute inset-x-0 bottom-0 z-40 bg-surface/80 backdrop-blur-xl">
+    <nav aria-label="主导航" className="hairline-t absolute inset-x-0 bottom-0 z-40 bg-grouped/95 backdrop-blur-xl">
       <div className="safe-bottom-pad">
-        <div className="flex h-[52px]">
+        <div className="flex h-[68px] px-4">
           {TABS.map(({ key, label, icon: Icon }) => {
             const selected = active === key
             return (
@@ -27,7 +27,7 @@ export default function TabBar({ active, onChange }: TabBarProps) {
                 key={key}
                 type="button"
                 onClick={() => onChange(key)}
-                className="relative flex flex-1 flex-col items-center justify-center gap-[2px] active:opacity-60"
+                className="relative flex flex-1 flex-col items-center justify-center gap-1 active:opacity-60"
                 style={{ minHeight: 44 }}
                 aria-label={label}
                 aria-current={selected ? 'page' : undefined}
@@ -35,17 +35,17 @@ export default function TabBar({ active, onChange }: TabBarProps) {
                 {selected && (
                   <motion.span
                     layoutId="tab-pill"
-                    className="absolute inset-x-8 top-[5px] bottom-[5px] rounded-full bg-brand/10"
+                    className="absolute inset-x-3 top-2 bottom-2 rounded-2xl bg-brand/10"
                     transition={{ type: 'spring', stiffness: 500, damping: 36 }}
                   />
                 )}
                 <Icon
-                  size={23}
+                  size={21}
                   strokeWidth={selected ? 2.2 : 1.8}
-                  className={selected ? 'text-brand' : 'text-ink-2'}
+                  className={`relative ${selected ? 'text-brand' : 'text-ink-2'}`}
                 />
                 <span
-                  className={`text-[10px] font-medium ${
+                  className={`relative text-[11px] font-medium ${
                     selected ? 'text-brand' : 'text-ink-2'
                   }`}
                 >
@@ -56,6 +56,6 @@ export default function TabBar({ active, onChange }: TabBarProps) {
           })}
         </div>
       </div>
-    </div>
+    </nav>
   )
 }

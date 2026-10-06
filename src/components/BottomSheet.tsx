@@ -25,7 +25,7 @@ export default function BottomSheet({
         <>
           <motion.div
             key="backdrop"
-            className="absolute inset-0 z-50 bg-black/35"
+            className="absolute inset-0 z-50 bg-ink/30 backdrop-blur-[3px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -34,7 +34,7 @@ export default function BottomSheet({
           />
           <motion.div
             key="sheet"
-            className="absolute inset-x-0 bottom-0 z-50 flex flex-col overflow-hidden rounded-t-[20px] bg-grouped"
+            className="absolute inset-x-0 bottom-0 z-50 flex flex-col overflow-hidden bottom-sheet bg-grouped"
             style={{ maxHeight }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}

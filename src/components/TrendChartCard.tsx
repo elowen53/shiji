@@ -78,7 +78,7 @@ export default function TrendChartCard({ data, unit, emptyText }: TrendChartCard
                   <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} stroke="rgba(60, 60, 67, 0.08)" />
+              <CartesianGrid vertical={false} stroke="rgba(70, 88, 61, 0.1)" strokeDasharray="3 5" />
               <XAxis
                 dataKey="date"
                 tickFormatter={fmtX}

@@ -78,19 +78,19 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
         </button>
       </div>
 
-      <div className="relative min-h-[420px] flex-1 overflow-hidden">
+      <div className="relative min-h-0 h-[440px] flex-auto overflow-y-auto no-scrollbar">
         <AnimatePresence mode="wait" initial={false}>
           {step === 'pick' ? (
             <motion.div
               key="pick"
-              className="flex h-full flex-col px-4"
+              className="flex min-h-full flex-col px-4 pb-4"
               initial={{ opacity: 0, x: -28 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -28 }}
               transition={{ type: 'spring', stiffness: 420, damping: 38 }}
             >
               {/* 搜索框 */}
-              <div className="mb-3 flex h-10 items-center gap-2 rounded-xl bg-fill px-3">
+              <div className="search-field mb-3 shrink-0">
                 <Search size={17} className="shrink-0 text-ink-2" />
                 <input
                   value={query}
@@ -101,7 +101,7 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
                 />
               </div>
 
-              <div className="ios-card no-scrollbar max-h-[340px] overflow-y-auto">
+              <div className="ios-card shrink-0">
                 {filtered.length === 0 ? (
                   <div className="px-4 py-10 text-center text-[15px] text-ink-2">
                     {foods.length === 0
@@ -139,7 +139,7 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
           ) : (
             <motion.div
               key="quantity"
-              className="flex h-full flex-col px-4"
+              className="flex min-h-full flex-col px-4 pb-4"
               initial={{ opacity: 0, x: 28 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 28 }}
