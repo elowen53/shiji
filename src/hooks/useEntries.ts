@@ -12,6 +12,8 @@ export interface EntriesApi {
   addEntry: (food: EntrySource, quantity: number, entryDate: string) => Promise<boolean>
   updateEntryQuantity: (entry: Entry, quantity: number) => Promise<boolean>
   deleteEntry: (id: string) => Promise<boolean>
+  /** 撤销删除：按原快照与原 created_at 重新插入，保持列表顺序 */
+  restoreEntry: (entry: Entry) => Promise<boolean>
   /** 前一天的记录条数（仅当天为空时有意义，用于「复制昨天的记录」） */
   prevDayCount: number
   /** 把前一天的全部记录复制到当前日期（新行、新 created_at，快照字段原样拷贝） */
@@ -168,6 +170,29 @@ export function useEntries(entryDate: string): EntriesApi {
     return true
   }, [])
 
+  const restoreEntry = useCallback(
+    async (entry: Entry) => {
+      if (!supabase) return false
+      // id 由数据库重新生成，其余字段原样写回
+      const { id: _id, ...row } = entry
+      void _id
+      const { data, error: err } = await supabase.from('entries').insert(row).select().single()
+      if (err) {
+        setError(err.message)
+        return false
+      }
+      if (entry.entry_date === entryDate) {
+        setEntries((prev) =>
+          [...prev, data as Entry].sort((a, b) =>
+            (a.created_at ?? '').localeCompare(b.created_at ?? ''),
+          ),
+        )
+      }
+      return true
+    },
+    [entryDate],
+  )
+
   return {
     entries,
     loading,
@@ -176,6 +201,7 @@ export function useEntries(entryDate: string): EntriesApi {
     addEntry,
     updateEntryQuantity,
     deleteEntry,
+    restoreEntry,
     prevDayCount,
     copyFromPrevDay,
   }

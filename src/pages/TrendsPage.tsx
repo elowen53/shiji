@@ -88,156 +88,157 @@ export default function TrendsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="page-header">
-        <BrandMasthead />
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="mb-1 text-[12px] text-ink-2">在日常里，看见一点点改变</p>
-            <h1 className="editorial-title text-[34px] leading-tight text-ink">趋势</h1>
-          </div>
-          <button type="button" onClick={() => setExportOpen(true)} className="icon-button" aria-label="导出数据">
-            <Share size={18} strokeWidth={1.7} />
-          </button>
-        </div>
-      </header>
-
-      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto page-content pb-[112px]">
-        {loading ? (
-          <>
-            <div className="ios-card mb-4 animate-pulse px-4 py-4">
-              <div className="mb-2 h-10 w-28 rounded bg-fill" />
-              <div className="h-3 w-20 rounded bg-fill" />
+      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-[112px]">
+        <header className="page-header">
+          <BrandMasthead />
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="mb-1 text-[12px] text-ink-2">在日常里，看见一点点改变</p>
+              <h1 className="editorial-title text-[34px] leading-tight text-ink">趋势</h1>
             </div>
-            <div className="ios-card mb-4 animate-pulse px-4 py-4">
-              <div className="h-[240px] rounded-xl bg-fill" />
-            </div>
-            <div className="ios-card animate-pulse px-4 py-4">
-              <div className="h-[240px] rounded-xl bg-fill" />
-            </div>
-          </>
-        ) : error ? (
-          <div className="ios-card px-4 py-10 text-center">
-            <p className="mb-4 text-[15px] text-ink-2">加载失败：{error}</p>
-            <button
-              type="button"
-              onClick={retry}
-              className="rounded-full bg-brand px-5 py-2 text-[15px] font-medium text-white active:bg-brand-press"
-            >
-              重试
+            <button type="button" onClick={() => setExportOpen(true)} className="icon-button" aria-label="导出数据">
+              <Share size={18} strokeWidth={1.7} />
             </button>
           </div>
-        ) : bothEmpty ? (
-          <div className="empty-state">
-            <div className="empty-symbol"><ChartNoAxesCombined size={27} strokeWidth={1.3} /></div>
-            <div className="mb-1 text-[17px] font-semibold text-ink">还没有指标记录</div>
-            <div className="text-[14px] text-ink-2">
-              去「记录」页点今日指标，添加体重、腰围或总消耗
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* 最新值大卡（体重 / 腰围） */}
-            {weightStat && weightWeekly && (
-              <WeightSummaryCard
-                value={weightStat.value}
-                dateLabel={`${formatDisplay(weightStat.date)} 记录`}
-                weekly={weightWeekly}
-              />
-            )}
-            {waistStat && (
-              <LatestStatCard
-                value={waistStat.value}
-                unit="cm"
-                dateLabel={`${formatDisplay(waistStat.date)} 记录`}
-                delta={waistStat.delta}
-              />
-            )}
-
-            {/* 区间分段控件：联动两张图 */}
-            <div className="mb-5 flex rounded-full border border-brand/10 bg-fill/60 p-1">
-              {RANGES.map((r) => {
-                const selected = range === r.key
-                return (
-                  <button
-                    key={r.key}
-                    type="button"
-                    onClick={() => setRange(r.key)}
-                    className="relative h-11 flex-1 rounded-full text-[13px] font-medium active:opacity-70"
-                    style={{ minHeight: 32 }}
-                    aria-pressed={selected}
-                  >
-                    {selected && (
-                      <motion.span
-                        layoutId="range-pill"
-                        className="absolute inset-0 rounded-full bg-brand shadow-sm"
-                        transition={{ type: 'spring', stiffness: 500, damping: 38 }}
-                      />
-                    )}
-                    <span
-                      className={`relative z-10 ${
-                        selected ? 'text-white' : 'text-ink-2'
-                      }`}
-                    >
-                      {r.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* 体重趋势 */}
-            {weight.points.length > 0 ? (
-              <div className="mb-4">
-                <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">体重</div>
-                <TrendChartCard
-                  data={weightData}
-                  unit="kg"
-                  emptyText="该区间暂无体重记录"
-                />
+        </header>
+        <div className="page-content">
+          {loading ? (
+            <>
+              <div className="ios-card mb-4 animate-pulse px-4 py-4">
+                <div className="mb-2 h-10 w-28 rounded bg-fill" />
+                <div className="h-3 w-20 rounded bg-fill" />
               </div>
-            ) : (
-              <EmptyMetricCard
-                kind="weight"
-                text="还没有体重记录"
-                hint="去「记录」页点今日指标，添加体重"
-              />
-            )}
-
-            {/* 热量收支 */}
-            {energy.balances.length > 0 && (
-              <>
-                <div className="mb-4">
-                  <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">热量收支</div>
-                  <EnergyBalanceCard data={balanceChart} summary={balanceSummary} />
-                </div>
-                {weight.points.length > 0 && (
-                  <div className="mb-4">
-                    <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">体重 × 热量收支</div>
-                    <WeightVsEnergyCard result={weightVsEnergy} />
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* 腰围趋势 */}
-            {waist.points.length > 0 ? (
-              <div>
-                <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">腰围</div>
-                <TrendChartCard
-                  data={waistData}
+              <div className="ios-card mb-4 animate-pulse px-4 py-4">
+                <div className="h-[240px] rounded-xl bg-fill" />
+              </div>
+              <div className="ios-card animate-pulse px-4 py-4">
+                <div className="h-[240px] rounded-xl bg-fill" />
+              </div>
+            </>
+          ) : error ? (
+            <div className="ios-card px-4 py-10 text-center">
+              <p className="mb-4 text-[15px] text-ink-2">加载失败：{error}</p>
+              <button
+                type="button"
+                onClick={retry}
+                className="rounded-full bg-brand px-5 py-2 text-[15px] font-medium text-white active:bg-brand-press"
+              >
+                重试
+              </button>
+            </div>
+          ) : bothEmpty ? (
+            <div className="empty-state">
+              <div className="empty-symbol"><ChartNoAxesCombined size={27} strokeWidth={1.3} /></div>
+              <div className="mb-1 text-[17px] font-semibold text-ink">还没有指标记录</div>
+              <div className="text-[14px] text-ink-2">
+                去「记录」页点今日指标，添加体重、腰围或总消耗
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* 最新值大卡（体重 / 腰围） */}
+              {weightStat && weightWeekly && (
+                <WeightSummaryCard
+                  value={weightStat.value}
+                  dateLabel={`${formatDisplay(weightStat.date)} 记录`}
+                  weekly={weightWeekly}
+                />
+              )}
+              {waistStat && (
+                <LatestStatCard
+                  value={waistStat.value}
                   unit="cm"
-                  emptyText="该区间暂无腰围记录"
+                  dateLabel={`${formatDisplay(waistStat.date)} 记录`}
+                  delta={waistStat.delta}
                 />
+              )}
+
+              {/* 区间分段控件：联动两张图 */}
+              <div className="mb-5 flex rounded-full border border-brand/10 bg-fill/60 p-1">
+                {RANGES.map((r) => {
+                  const selected = range === r.key
+                  return (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => setRange(r.key)}
+                      className="relative h-11 flex-1 rounded-full text-[13px] font-medium active:opacity-70"
+                      style={{ minHeight: 32 }}
+                      aria-pressed={selected}
+                    >
+                      {selected && (
+                        <motion.span
+                          layoutId="range-pill"
+                          className="absolute inset-0 rounded-full bg-brand shadow-sm"
+                          transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+                        />
+                      )}
+                      <span
+                        className={`relative z-10 ${
+                          selected ? 'text-white' : 'text-ink-2'
+                        }`}
+                      >
+                        {r.label}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
-            ) : (
-              <EmptyMetricCard
-                kind="waist"
-                text="还没有腰围记录"
-                hint="去「记录」页点今日指标，添加腰围"
-              />
-            )}
-          </>
-        )}
+
+              {/* 体重趋势 */}
+              {weight.points.length > 0 ? (
+                <div className="mb-4">
+                  <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">体重</div>
+                  <TrendChartCard
+                    data={weightData}
+                    unit="kg"
+                    emptyText="该区间暂无体重记录"
+                  />
+                </div>
+              ) : (
+                <EmptyMetricCard
+                  kind="weight"
+                  text="还没有体重记录"
+                  hint="去「记录」页点今日指标，添加体重"
+                />
+              )}
+
+              {/* 热量收支 */}
+              {energy.balances.length > 0 && (
+                <>
+                  <div className="mb-4">
+                    <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">热量收支</div>
+                    <EnergyBalanceCard data={balanceChart} summary={balanceSummary} />
+                  </div>
+                  {weight.points.length > 0 && (
+                    <div className="mb-4">
+                      <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">体重 × 热量收支</div>
+                      <WeightVsEnergyCard result={weightVsEnergy} />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* 腰围趋势 */}
+              {waist.points.length > 0 ? (
+                <div>
+                  <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">腰围</div>
+                  <TrendChartCard
+                    data={waistData}
+                    unit="cm"
+                    emptyText="该区间暂无腰围记录"
+                  />
+                </div>
+              ) : (
+                <EmptyMetricCard
+                  kind="waist"
+                  text="还没有腰围记录"
+                  hint="去「记录」页点今日指标，添加腰围"
+                />
+              )}
+            </>
+          )}
+        </div>
       </main>
 
       <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} />

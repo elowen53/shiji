@@ -9,10 +9,12 @@ interface QuantitySheetProps {
   entry: Entry | null
   onClose: () => void
   onSave: (entry: Entry, quantity: number) => Promise<boolean>
+  /** 删除该条记录（由调用方负责关闭与撤销提示） */
+  onDelete: (entry: Entry) => void
 }
 
-/** 修改已有记录的数量：以条目快照中的每单位营养值实时折算 */
-export default function QuantitySheet({ entry, onClose, onSave }: QuantitySheetProps) {
+/** 编辑已有记录：修改数量（以条目快照中的每单位营养值实时折算）或删除 */
+export default function QuantitySheet({ entry, onClose, onSave, onDelete }: QuantitySheetProps) {
   const [quantity, setQuantity] = useState(1)
   const [saving, setSaving] = useState(false)
 
@@ -93,6 +95,14 @@ export default function QuantitySheet({ entry, onClose, onSave }: QuantitySheetP
             className="flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
           >
             {saving ? '保存中…' : '保存'}
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => onDelete(entry)}
+            className="mt-3 flex h-[52px] w-full items-center justify-center rounded-2xl bg-surface text-[17px] font-semibold text-danger active:bg-grouped disabled:opacity-40"
+          >
+            删除这条记录
           </button>
         </div>
       )}

@@ -7,8 +7,9 @@ interface WeightSummaryCardProps {
 }
 
 function signed(value: number, digits = 1): string {
-  if (value === 0) return value.toFixed(digits)
-  return `${value > 0 ? '+' : ''}${value.toFixed(digits)}`
+  const body = Math.abs(value).toFixed(digits)
+  if (Number(body) === 0) return body
+  return `${value > 0 ? '+' : '−'}${body}`
 }
 
 function changeColor(value: number | null): string {

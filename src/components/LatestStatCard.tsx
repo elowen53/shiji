@@ -1,4 +1,4 @@
-import { fmtMacro } from '@/lib/format'
+import { fmtMacro, fmtSigned } from '@/lib/format'
 
 interface LatestStatCardProps {
   /** 最新记录值 */
@@ -30,8 +30,7 @@ export default function LatestStatCard({ value, unit, dateLabel, delta }: Latest
               delta > 0 ? 'text-danger' : 'text-success'
             }`}
           >
-            较上次 {delta > 0 ? '+' : ''}
-            {delta.toFixed(1)} {unit}
+            较上次 {fmtSigned(delta)} {unit}
           </div>
         )}
       </div>

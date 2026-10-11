@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Trash2 } from 'lucide-react'
 import type { Entry } from '@/types'
-import { fmtKcal, fmtMacro, fmtQty } from '@/lib/format'
+import { fmtAmount, fmtKcal, fmtMacro } from '@/lib/format'
 
 interface EntryRowProps {
   entry: Entry
@@ -10,9 +10,11 @@ interface EntryRowProps {
   onTap: (entry: Entry) => void
 }
 
-/** 记录条目：iOS 风格左滑露出删除按钮；轻点弹出操作 */
+/** 记录条目：iOS 风格左滑露出删除按钮；轻点打开编辑 */
 export default function EntryRow({ entry, onDelete, onTap }: EntryRowProps) {
   const [open, setOpen] = useState(false)
+  /** 按下位置：拖动结束时手指仍在行上，framer 会同时触发 onTap，位移超过阈值的视为拖动而非点按 */
+  const downX = useRef(0)
 
   return (
     <motion.div
@@ -40,8 +42,15 @@ export default function EntryRow({ entry, onDelete, onTap }: EntryRowProps) {
         dragMomentum={false}
         animate={{ x: open ? -84 : 0 }}
         transition={{ type: 'spring', stiffness: 480, damping: 42 }}
+        onTapStart={(_, info) => {
+          downX.current = info.point.x
+        }}
         onDragEnd={(_, info) => setOpen(info.offset.x < -48)}
-        onTap={() => (open ? setOpen(false) : onTap(entry))}
+        onTap={(_, info) => {
+          if (Math.abs(info.point.x - downX.current) > 6) return
+          if (open) setOpen(false)
+          else onTap(entry)
+        }}
         className="ios-row relative gap-3"
         style={{ touchAction: 'pan-y' }}
       >
@@ -50,7 +59,7 @@ export default function EntryRow({ entry, onDelete, onTap }: EntryRowProps) {
             {entry.food_name}
           </div>
           <div className="tnum mt-[1px] text-[13px] text-ink-2">
-            {fmtQty(entry.quantity)} × {entry.unit}
+            {fmtAmount(entry.quantity, entry.unit)}
           </div>
         </div>
         <div className="shrink-0 text-right">

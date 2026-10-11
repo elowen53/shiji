@@ -25,12 +25,12 @@ const signedKg = (v: number) => {
   return `${r > 0 ? '+' : '−'}${fmtMacro(Math.abs(r))}`
 }
 
-/** 刻度：按数据范围选 0.25 / 0.5 / 1 kg 步长，并始终包含 0 */
+/** 刻度：选不超过 5 段的 0.25 / 0.5 / 1 / 2 / 5 kg 步长，并始终包含 0（刻度过多时图表会隐藏部分标签） */
 function kgTicks(points: ExpectedActualPoint[]): number[] {
   const values = points.flatMap((p) => [p.expected, p.actual])
   const min = Math.min(0, ...values)
   const max = Math.max(0, ...values)
-  const step = max - min <= 1.5 ? 0.25 : max - min <= 4 ? 0.5 : 1
+  const step = [0.25, 0.5, 1, 2, 5, 10].find((v) => (max - min) / v <= 4) ?? 10
   const lo = Math.floor(min / step) * step - (min % step === 0 ? step : 0)
   const hi = Math.ceil(max / step) * step + (max % step === 0 ? step : 0)
   const ticks: number[] = []

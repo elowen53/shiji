@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Plus, Scale, Utensils } from 'lucide-react'
 import BrandMasthead from '@/components/BrandMasthead'
 import AddEntrySheet from '@/components/AddEntrySheet'
-import BottomSheet from '@/components/BottomSheet'
 import EntryRow from '@/components/EntryRow'
 import MacroTargetsSheet from '@/components/MacroTargetsSheet'
 import MetricsSheet from '@/components/MetricsSheet'
@@ -13,7 +12,8 @@ import { useMacroTargets } from '@/hooks/useMacroTargets'
 import { useMetrics } from '@/hooks/useMetrics'
 import { useToast } from '@/lib/toast'
 import { addDays, formatDisplay, isToday, todayKey, weekdayLabel } from '@/lib/date'
-import { fmtKcal, fmtMacro } from '@/lib/format'
+import { fmtGram, fmtKcal, fmtMacro } from '@/lib/format'
+import { kcalFromMacros } from '@/lib/nutrition'
 import type { DayTotals, Entry, EntrySource, Food, MacroTargets, MetricInput } from '@/types'
 
 interface DiaryPageProps {
@@ -53,6 +53,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
     addEntry,
     updateEntryQuantity,
     deleteEntry,
+    restoreEntry,
     prevDayCount,
     copyFromPrevDay,
   } = useEntries(dateKey)
@@ -60,7 +61,6 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
   const { targets, save: saveTargets } = useMacroTargets()
 
   const [addOpen, setAddOpen] = useState(false)
-  const [actionEntry, setActionEntry] = useState<Entry | null>(null)
   const [editEntry, setEditEntry] = useState<Entry | null>(null)
   const [metricsOpen, setMetricsOpen] = useState(false)
   const [targetsOpen, setTargetsOpen] = useState(false)
@@ -103,8 +103,13 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
       barClass,
     }
   })
-  const goalRows = macros.filter((m) => m.goal != null)
   const hasAnyTarget = macros.some((m) => m.factor != null)
+  /** 热量目标：三项营养素目标都设置时按 4 / 9 / 4 千卡每克折算 */
+  const kcalGoal = macros.every((m) => m.goal != null)
+    ? kcalFromMacros(macros[0].goal!, macros[1].goal!, macros[2].goal!)
+    : null
+  const kcalPct = kcalGoal ? Math.round((totals.kcal / kcalGoal) * 100) : null
+  const canGoForward = dateKey < todayKey()
 
   const handleCopyPrevDay = async () => {
     if (copying) return
@@ -124,10 +129,21 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
     return ok
   }
 
+  /** 删除不再二次确认，改为提示里提供「撤销」 */
   const handleDelete = async (entry: Entry) => {
-    setActionEntry(null)
+    setEditEntry(null)
     const ok = await deleteEntry(entry.id)
-    toast(ok ? '已删除' : '删除失败，请检查网络', ok ? 'success' : 'error')
+    if (!ok) {
+      toast('删除失败，请检查网络', 'error')
+      return
+    }
+    toast(`已删除「${entry.food_name}」`, 'info', {
+      label: '撤销',
+      onPress: () =>
+        void restoreEntry(entry).then((restored) =>
+          toast(restored ? '已恢复' : '恢复失败，请检查网络', restored ? 'success' : 'error'),
+        ),
+    })
   }
 
   const handleUpdateQuantity = async (entry: Entry, quantity: number) => {
@@ -155,10 +171,12 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
 
   return (
     <div className="flex h-full flex-col">
-      {/* 顶部：日期切换 + 大标题 */}
-      <header className="page-header">
-        <BrandMasthead />
-        <div className="flex items-center justify-between gap-3">
+      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-[160px]">
+        <div className="page-header -mb-2.5 pb-0">
+          <BrandMasthead />
+        </div>
+        {/* 日期栏：滚动时吸顶，品牌栏随内容滚走 */}
+        <div className="page-sticky flex items-center justify-between gap-3">
           <div>
             <div className="mb-1 text-[12px] tracking-wide text-ink-2">
               {weekdayLabel(dateKey)} · {isToday(dateKey) ? '今日饮食' : '饮食记录'}
@@ -186,219 +204,204 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
             <button type="button" aria-label="前一天" onClick={() => setDateKey((k) => addDays(k, -1))} className="icon-button">
               <ChevronLeft size={20} strokeWidth={1.7} />
             </button>
-            <button type="button" aria-label="后一天" onClick={() => setDateKey((k) => addDays(k, 1))} className="icon-button">
+            <button
+              type="button"
+              aria-label="后一天"
+              disabled={!canGoForward}
+              onClick={() => setDateKey((k) => addDays(k, 1))}
+              className="icon-button disabled:opacity-35"
+            >
               <ChevronRight size={20} strokeWidth={1.7} />
             </button>
           </div>
         </div>
-      </header>
 
-      {/* 内容区 */}
-      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto page-content pb-[160px]">
-        {/* 当日汇总卡片 */}
-        <section className="nutrition-card mb-4">
-          <div className="mb-4">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-[13px] font-medium text-brand">{isToday(dateKey) ? '今日总热量' : '当日总热量'}</span>
-              <span className="text-[9px] tracking-[0.16em] text-brand/70" aria-hidden="true">DAILY INTAKE</span>
-            </div>
-            <div className="flex items-baseline gap-2.5">
-              <span className="tnum calorie-number">{fmtKcal(totals.kcal)}</span>
-              <span className="text-[13px] text-ink-2">千卡</span>
-            </div>
-            {metric?.burn_kcal != null && (
-              <div className="tnum mt-1.5 text-[13px] text-ink-2">
-                消耗 {fmtKcal(metric.burn_kcal)} 千卡 · 净摄入{' '}
-                {fmtKcal(totals.kcal - metric.burn_kcal)} 千卡
-              </div>
-            )}
-          </div>
-          <div className="macro-grid">
-            {macros.map(({ label, value, textClass }) => (
-              <div key={label} className="flex-1 text-center">
-                <div className={`tnum text-[22px] font-medium ${textClass}`}>
-                  {fmtMacro(value)}
-                  <span className="text-[12px] font-normal text-ink-2"> g</span>
-                </div>
-                <div className="mt-[1px] text-[12px] text-ink-2">{label}</div>
-                {hasWeight && (
-                  <div className="tnum mt-[1px] h-4 text-[12px] leading-4 text-ink-2">
-                    {perKg(value)!.toFixed(1)} g/kg
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          {goalRows.length > 0 ? (
-            <div className="mt-3 space-y-3 px-1">
-              {goalRows.map(({ label, value, factor, goal, completion, barClass }) => {
-                const pct = Math.min(100, Math.max(0, completion!))
-                return (
-                  <div key={label}>
-                    <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                      <span className="font-medium text-ink">
-                        {label}目标
-                        <span className="tnum ml-1 text-[11px] font-normal text-ink-2">
-                          {fmtMacro(factor!)} g/kg
-                        </span>
-                      </span>
-                      <span className="tnum text-ink-2">
-                        {fmtMacro(value)} / {fmtMacro(goal!)} g · {completion}%
-                      </span>
-                    </div>
-                    <div
-                      className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-brand/10"
-                      role="progressbar"
-                      aria-label={`${label}目标完成度`}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={pct}
-                    >
-                      <div
-                        className={`h-full rounded-full ${barClass} transition-[width] duration-300`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-              <div className="flex items-center justify-between gap-3">
-                <span className="tnum text-[11px] text-ink-2">
-                  按最近体重 {fmtMacro(latestWeight!)} kg 换算
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setTargetsOpen(true)}
-                  className="-my-2 h-8 rounded-full px-2 text-[12px] font-medium text-brand active:bg-brand/10"
-                >
-                  调整目标
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-3 flex items-center justify-between gap-3 px-1">
-              <span className="text-[12px] text-ink-2">
-                {!hasWeight && hasAnyTarget
-                  ? '记录体重后按 g/kg 生成每日目标'
-                  : '按体重 g/kg 设置三大营养素目标'}
-              </span>
+        <div className="page-content">
+          {/* 当日汇总：热量（含目标进度）+ 三大营养素（各自带目标进度） */}
+          <section className="nutrition-card mb-4">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-[13px] font-medium text-brand">{isToday(dateKey) ? '今日摄入' : '当日摄入'}</span>
               <button
                 type="button"
                 onClick={() => setTargetsOpen(true)}
-                className="-my-2 h-8 shrink-0 rounded-full px-2 text-[12px] font-medium text-brand active:bg-brand/10"
+                className="-my-2 -mr-2 h-9 rounded-full px-2.5 text-[12px] font-medium text-brand active:bg-brand/10"
               >
                 {hasAnyTarget ? '调整目标' : '设置目标'}
               </button>
             </div>
-          )}
-        </section>
-
-        {/* 今日指标：体重 + 腰围 + 总消耗，点按录入 */}
-        <button
-          type="button"
-          onClick={() => setMetricsOpen(true)}
-          className="ios-card block w-full px-4 py-3 text-left active:bg-grouped"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10">
-              <Scale size={18} className="text-success" />
+            <div className="flex items-baseline gap-2">
+              <span className="tnum calorie-number">{fmtKcal(totals.kcal)}</span>
+              <span className="tnum text-[14px] text-ink-2">
+                {kcalGoal != null ? `/ ${fmtKcal(kcalGoal)} 千卡` : '千卡'}
+              </span>
             </div>
-            <div className="min-w-0 flex-1 text-[14px] font-medium text-ink">今日指标</div>
-            <ChevronRight size={16} className="shrink-0 text-ink-3" />
-          </div>
-          <div className="mt-3 flex">
-            {(
-              [
-                ['体重', metric?.weight_kg, 'kg'],
-                ['腰围', metric?.waist_cm, 'cm'],
-                ['消耗', metric?.burn_kcal, '千卡'],
-              ] as const
-            ).map(([label, v, unit]) => (
-              <div key={label} className="flex-1">
-                <div className="text-[12px] text-ink-2">{label}</div>
-                <div className="tnum mt-1 text-[20px] font-medium text-ink">
-                  {v != null ? (
-                    <>
-                      {unit === '千卡' ? fmtKcal(v) : fmtMacro(v)}
-                      <span className="text-[12px] font-normal text-ink-2"> {unit}</span>
-                    </>
-                  ) : (
-                    <span className="text-ink-3">—</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </button>
-
-        <div className="section-heading">
-          <h2>饮食记录</h2>
-          <span className="tnum text-[11px] font-normal tracking-normal text-ink-2">{entries.length} 条记录</span>
-        </div>
-        {/* 记录列表 */}
-        {loading ? (
-          <div className="ios-card">
-            {[0, 1, 2].map((i) => (
-              <div key={i}>
-                {i > 0 && <div className="ios-separator" />}
-                <div className="ios-row animate-pulse gap-3">
-                  <div className="flex-1">
-                    <div className="mb-2 h-4 w-24 rounded bg-fill" />
-                    <div className="h-3 w-16 rounded bg-fill" />
-                  </div>
-                  <div className="h-4 w-14 rounded bg-fill" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : error ? (
-          <div className="ios-card px-4 py-10 text-center">
-            <p className="mb-4 text-[15px] text-ink-2">加载失败：{error}</p>
-            <button
-              type="button"
-              onClick={() => void refresh()}
-              className="rounded-full bg-brand px-5 py-2 text-[15px] font-medium text-white active:bg-brand-press"
-            >
-              重试
-            </button>
-          </div>
-        ) : entries.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-symbol"><Utensils size={25} strokeWidth={1.3} /></div>
-            <div className="mb-1 text-[17px] font-semibold text-ink">
-              {isToday(dateKey) ? '今天还没有记录' : '这一天没有记录'}
-            </div>
-            <div className="text-[14px] text-ink-2">点右下角 ＋ 添加第一笔</div>
-            {prevDayCount > 0 && (
-              <motion.button
-                type="button"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                whileTap={{ scale: 0.97 }}
-                disabled={copying}
-                onClick={() => void handleCopyPrevDay()}
-                className="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-brand px-6 text-[16px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
-              >
-                {copying ? '复制中…' : `复制昨天的记录（${prevDayCount} 条）`}
-              </motion.button>
+            {kcalGoal != null && (
+              <ProgressBar pct={kcalPct!} barClass="bg-brand" label="热量目标完成度" className="mt-3 h-2" />
             )}
-          </div>
-        ) : (
-          <div className="ios-card">
-            <AnimatePresence initial={false}>
-              {entries.map((e, i) => (
-                <div key={e.id}>
-                  {i > 0 && <div className="ios-separator" />}
-                  <EntryRow
-                    entry={e}
-                    onDelete={(en) => void handleDelete(en)}
-                    onTap={(en) => setActionEntry(en)}
-                  />
+            {(kcalGoal != null || metric?.burn_kcal != null) && (
+              <div className="tnum mt-2 flex items-center justify-between gap-3 text-[12px] text-ink-2">
+                <span>
+                  {kcalGoal == null
+                    ? ''
+                    : totals.kcal <= kcalGoal
+                      ? `还可摄入 ${fmtKcal(kcalGoal - totals.kcal)} 千卡`
+                      : `已超出 ${fmtKcal(totals.kcal - kcalGoal)} 千卡`}
+                </span>
+                {metric?.burn_kcal != null && (
+                  <span>
+                    消耗 {fmtKcal(metric.burn_kcal)} · 净 {fmtKcal(totals.kcal - metric.burn_kcal)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="macro-grid mt-4">
+              {macros.map(({ label, value, factor, goal, completion, barClass }) => {
+                const kg = perKg(value)
+                return (
+                  <div key={label}>
+                    <div className="flex items-center gap-1.5 text-[12px] text-ink-2">
+                      <span className={`h-2 w-2 rounded-full ${barClass}`} aria-hidden="true" />
+                      {label}
+                    </div>
+                    <div className="tnum mt-1 whitespace-nowrap text-[20px] font-medium leading-7 text-ink">
+                      {fmtGram(value)}
+                      <span className="text-[12px] font-normal text-ink-2">
+                        {goal != null ? ` / ${fmtGram(goal)} g` : ' g'}
+                      </span>
+                    </div>
+                    {goal != null ? (
+                      <ProgressBar pct={completion!} barClass={barClass} label={`${label}目标完成度`} className="mt-1.5 h-1.5" />
+                    ) : (
+                      <div className="mt-1.5 h-1.5 rounded-full bg-brand/5" aria-hidden="true" />
+                    )}
+                    <div className="tnum mt-1.5 text-[11px] text-ink-2">
+                      {kg != null
+                        ? `${kg.toFixed(1)}${factor != null ? ` / ${fmtMacro(factor)}` : ''} g/kg`
+                        : goal != null
+                          ? `${completion}%`
+                          : '—'}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="tnum mt-3 text-[11px] text-ink-2">
+              {hasWeight
+                ? hasAnyTarget
+                  ? `目标按最近体重 ${fmtMacro(latestWeight!)} kg × g/kg 系数换算`
+                  : '设置 g/kg 目标后，按体重自动换算每日克数'
+                : '记录体重后，可按 g/kg 生成每日目标'}
+            </div>
+          </section>
+
+          {/* 今日指标：体重 + 腰围 + 总消耗，点按录入 */}
+          <button
+            type="button"
+            onClick={() => setMetricsOpen(true)}
+            className="ios-card block w-full px-4 py-3 text-left active:bg-grouped"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10">
+                <Scale size={18} className="text-success" />
+              </div>
+              <div className="min-w-0 flex-1 text-[14px] font-medium text-ink">今日指标</div>
+              <ChevronRight size={16} className="shrink-0 text-ink-3" />
+            </div>
+            <div className="mt-3 flex">
+              {(
+                [
+                  ['体重', metric?.weight_kg, 'kg'],
+                  ['腰围', metric?.waist_cm, 'cm'],
+                  ['消耗', metric?.burn_kcal, '千卡'],
+                ] as const
+              ).map(([label, v, unit]) => (
+                <div key={label} className="flex-1">
+                  <div className="text-[12px] text-ink-2">{label}</div>
+                  <div className="tnum mt-1 text-[20px] font-medium text-ink">
+                    {v != null ? (
+                      <>
+                        {unit === '千卡' ? fmtKcal(v) : fmtMacro(v)}
+                        <span className="text-[12px] font-normal text-ink-2"> {unit}</span>
+                      </>
+                    ) : (
+                      <span className="text-ink-3">—</span>
+                    )}
+                  </div>
                 </div>
               ))}
-            </AnimatePresence>
+            </div>
+          </button>
+
+          <div className="section-heading">
+            <h2>饮食记录</h2>
+            <span className="tnum text-[11px] font-normal tracking-normal text-ink-2">{entries.length} 条记录</span>
           </div>
-        )}
+          {/* 记录列表 */}
+          {loading ? (
+            <div className="ios-card">
+              {[0, 1, 2].map((i) => (
+                <div key={i}>
+                  {i > 0 && <div className="ios-separator" />}
+                  <div className="ios-row animate-pulse gap-3">
+                    <div className="flex-1">
+                      <div className="mb-2 h-4 w-24 rounded bg-fill" />
+                      <div className="h-3 w-16 rounded bg-fill" />
+                    </div>
+                    <div className="h-4 w-14 rounded bg-fill" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="ios-card px-4 py-10 text-center">
+              <p className="mb-4 text-[15px] text-ink-2">加载失败：{error}</p>
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                className="rounded-full bg-brand px-5 py-2 text-[15px] font-medium text-white active:bg-brand-press"
+              >
+                重试
+              </button>
+            </div>
+          ) : entries.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-symbol"><Utensils size={25} strokeWidth={1.3} /></div>
+              <div className="mb-1 text-[17px] font-semibold text-ink">
+                {isToday(dateKey) ? '今天还没有记录' : '这一天没有记录'}
+              </div>
+              <div className="text-[14px] text-ink-2">点右下角「记一笔」添加第一笔</div>
+              {prevDayCount > 0 && (
+                <motion.button
+                  type="button"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileTap={{ scale: 0.97 }}
+                  disabled={copying}
+                  onClick={() => void handleCopyPrevDay()}
+                  className="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-brand px-6 text-[16px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
+                >
+                  {copying ? '复制中…' : `复制昨天的记录（${prevDayCount} 条）`}
+                </motion.button>
+              )}
+            </div>
+          ) : (
+            <div className="ios-card">
+              <AnimatePresence initial={false}>
+                {entries.map((e, i) => (
+                  <div key={e.id}>
+                    {i > 0 && <div className="ios-separator" />}
+                    <EntryRow
+                      entry={e}
+                      onDelete={(en) => void handleDelete(en)}
+                      onTap={(en) => setEditEntry(en)}
+                    />
+                  </div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* 添加按钮 */}
@@ -422,50 +425,11 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         onSave={handleAdd}
       />
 
-      {/* 条目操作 Action Sheet */}
-      <BottomSheet open={actionEntry !== null} onClose={() => setActionEntry(null)} maxHeight="60%">
-        <div className="px-4 pb-3 pt-1">
-          <div className="mb-2 truncate px-2 text-center text-[14px] text-ink-2">
-            {actionEntry?.food_name}
-          </div>
-          <div className="ios-card mb-3">
-            <button
-              type="button"
-              className="ios-row w-full justify-center text-[17px] text-brand active:bg-grouped"
-              onClick={() => {
-                const en = actionEntry
-                setActionEntry(null)
-                if (en) setEditEntry(en)
-              }}
-            >
-              修改数量
-            </button>
-            <div className="ios-separator" />
-            <button
-              type="button"
-              className="ios-row w-full justify-center text-[17px] text-danger active:bg-grouped"
-              onClick={() => {
-                if (actionEntry) void handleDelete(actionEntry)
-              }}
-            >
-              删除
-            </button>
-          </div>
-          <button
-            type="button"
-            className="ios-card flex h-[52px] w-full items-center justify-center text-[17px] font-semibold text-brand active:bg-grouped"
-            onClick={() => setActionEntry(null)}
-          >
-            取消
-          </button>
-        </div>
-        <div className="safe-bottom-pad shrink-0" />
-      </BottomSheet>
-
       <QuantitySheet
         entry={editEntry}
         onClose={() => setEditEntry(null)}
         onSave={handleUpdateQuantity}
+        onDelete={(en) => void handleDelete(en)}
       />
 
       <MetricsSheet
@@ -482,6 +446,36 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         latestWeight={hasWeight ? latestWeight : null}
         onClose={() => setTargetsOpen(false)}
         onSave={handleSaveTargets}
+      />
+    </div>
+  )
+}
+
+/** 细进度条：超过 100% 时填满（数值文字另行展示） */
+function ProgressBar({
+  pct,
+  barClass,
+  label,
+  className,
+}: {
+  pct: number
+  barClass: string
+  label: string
+  className: string
+}) {
+  const width = Math.min(100, Math.max(0, pct))
+  return (
+    <div
+      className={`overflow-hidden rounded-full bg-brand/10 ${className}`}
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={width}
+    >
+      <div
+        className={`h-full rounded-full ${barClass} transition-[width] duration-300`}
+        style={{ width: `${width}%` }}
       />
     </div>
   )

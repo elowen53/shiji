@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Minus, Plus } from 'lucide-react'
+import { parseMeasureUnit } from '@/lib/format'
 
 interface StepperProps {
   value: number
@@ -58,16 +59,6 @@ function DecimalInput({ value, normalize, onChange, ariaLabel, className }: Deci
       className={className}
     />
   )
-}
-
-/** 从单位中解析出每单位克数 / 毫升数，如 "100g" → { amount: 100, label: 'g' } */
-function parseMeasureUnit(unit?: string): { amount: number; label: string } | null {
-  const m = unit?.trim().match(/^(\d+(?:\.\d+)?)\s*(g|克|ml|毫升)$/i)
-  if (!m) return null
-  const amount = parseFloat(m[1])
-  if (!Number.isFinite(amount) || amount <= 0) return null
-  const label = /^(g|克)$/i.test(m[2]) ? 'g' : 'ml'
-  return { amount, label }
 }
 
 /** 数量步进器：− / ＋ 按钮 + 中间直接输入（最小 0.1，精确到 0.01；重量 / 体积单位支持按克换算） */

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, PencilLine, Search, X } from 'lucide-react'
 import BottomSheet from '@/components/BottomSheet'
@@ -6,6 +6,8 @@ import Stepper from '@/components/Stepper'
 import type { EntrySource, Food } from '@/types'
 import { fmtKcal, fmtMacro } from '@/lib/format'
 import { kcalFromMacros, parseManualKcal, parseNum } from '@/lib/nutrition'
+import { addDays, todayKey } from '@/lib/date'
+import { supabase } from '@/lib/supabase'
 
 interface AddEntrySheetProps {
   open: boolean
@@ -19,6 +21,37 @@ const MACRO_FIELDS: { key: 'protein' | 'fat' | 'carbs'; label: string }[] = [
   { key: 'fat', label: '脂肪（克）' },
   { key: 'carbs', label: '碳水（克）' },
 ]
+
+/** 「常吃」统计窗口与展示数量 */
+const USAGE_DAYS = 60
+const FREQUENT_COUNT = 5
+
+/** 打开面板时统计近 60 天各食物的记录次数，用于把常吃的排在前面 */
+function useFoodUsage(open: boolean): Map<string, number> {
+  const [usage, setUsage] = useState<Map<string, number>>(new Map())
+  useEffect(() => {
+    if (!open || !supabase) return
+    let cancelled = false
+    supabase
+      .from('entries')
+      .select('food_id')
+      .not('food_id', 'is', null)
+      .gte('entry_date', addDays(todayKey(), -USAGE_DAYS))
+      .limit(1000)
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        const counts = new Map<string, number>()
+        for (const { food_id } of data as { food_id: string }[]) {
+          counts.set(food_id, (counts.get(food_id) ?? 0) + 1)
+        }
+        setUsage(counts)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open])
+  return usage
+}
 
 const EMPTY_CUSTOM = { name: '', unit: '', protein: '', fat: '', carbs: '', kcal: '' }
 
@@ -34,11 +67,25 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
   const [saving, setSaving] = useState(false)
   const [custom, setCustom] = useState(EMPTY_CUSTOM)
 
-  const filtered = useMemo(() => {
+  const usage = useFoodUsage(open)
+
+  /** 无搜索词时分「常吃」与「全部」两组；有搜索词时结果按记录次数排序 */
+  const sections = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return foods
-    return foods.filter((f) => f.name.toLowerCase().includes(q))
-  }, [foods, query])
+    const byUsage = (list: Food[]) =>
+      [...list].sort((a, b) => (usage.get(b.id) ?? 0) - (usage.get(a.id) ?? 0))
+    if (q) {
+      return [{ title: null, items: byUsage(foods.filter((f) => f.name.toLowerCase().includes(q))) }]
+    }
+    const frequent = byUsage(foods.filter((f) => (usage.get(f.id) ?? 0) >= 2)).slice(0, FREQUENT_COUNT)
+    if (frequent.length === 0) return [{ title: null, items: foods }]
+    const ids = new Set(frequent.map((f) => f.id))
+    return [
+      { title: '常吃', items: frequent },
+      { title: '全部食物', items: foods.filter((f) => !ids.has(f.id)) },
+    ].filter((sec) => sec.items.length > 0)
+  }, [foods, query, usage])
+  const matchCount = sections.reduce((n, sec) => n + sec.items.length, 0)
 
   const reset = () => {
     setStep('pick')
@@ -150,53 +197,52 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
               <button
                 type="button"
                 onClick={openCustom}
-                className="ios-card ios-row mb-3 w-full shrink-0 gap-3 text-left active:bg-grouped"
+                className="ios-card ios-row mb-4 w-full shrink-0 gap-3 text-left active:bg-grouped"
               >
                 <PencilLine size={18} className="shrink-0 text-brand" />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[16px] text-ink">
-                    {query.trim() ? `临时记录「${query.trim()}」` : '临时记录'}
-                  </div>
-                  <div className="mt-[1px] text-[13px] text-ink-2">
-                    外食、偶尔吃一次的食物，只记入当天，不存入食物库
-                  </div>
+                <div className="min-w-0 flex-1 truncate text-[16px] text-ink">
+                  {query.trim() ? `临时记录「${query.trim()}」` : '临时记录'}
                 </div>
+                <div className="shrink-0 text-[12px] text-ink-2">只记当天，不入食物库</div>
               </button>
 
-              <div className="ios-card shrink-0">
-                {filtered.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-[15px] text-ink-2">
-                    {foods.length === 0
-                      ? '食物库还是空的，先去「食物库」添加吧'
-                      : '没有匹配的食物'}
-                  </div>
-                ) : (
-                  filtered.map((f, i) => (
-                    <div key={f.id}>
-                      {i > 0 && <div className="ios-separator" />}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelected(f)
-                          setQuantity(1)
-                          setStep('quantity')
-                        }}
-                        className="ios-row w-full gap-3 text-left active:bg-grouped"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-[16px] text-ink">{f.name}</div>
-                          <div className="tnum mt-[1px] text-[13px] text-ink-2">
-                            每{f.unit}
-                          </div>
+              {matchCount === 0 ? (
+                <div className="ios-card shrink-0 px-4 py-10 text-center text-[15px] text-ink-2">
+                  {foods.length === 0
+                    ? '食物库还是空的，先去「食物库」添加吧'
+                    : '没有匹配的食物，可以用上面的「临时记录」'}
+                </div>
+              ) : (
+                sections.map((sec) => (
+                  <div key={sec.title ?? 'all'} className="mb-4 shrink-0">
+                    {sec.title && <div className="mb-1.5 px-4 text-[13px] text-ink-2">{sec.title}</div>}
+                    <div className="ios-card">
+                      {sec.items.map((f, i) => (
+                        <div key={f.id}>
+                          {i > 0 && <div className="ios-separator" />}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelected(f)
+                              setQuantity(1)
+                              setStep('quantity')
+                            }}
+                            className="ios-row w-full gap-3 text-left active:bg-grouped"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-[16px] text-ink">{f.name}</div>
+                              <div className="tnum mt-[1px] text-[13px] text-ink-2">每{f.unit}</div>
+                            </div>
+                            <div className="tnum shrink-0 text-[15px] text-ink-2">
+                              {fmtKcal(f.kcal)} 千卡
+                            </div>
+                          </button>
                         </div>
-                        <div className="tnum shrink-0 text-[15px] text-ink-2">
-                          {fmtKcal(f.kcal)} 千卡
-                        </div>
-                      </button>
+                      ))}
                     </div>
-                  ))
-                )}
-              </div>
+                  </div>
+                ))
+              )}
             </motion.div>
           ) : step === 'custom' ? (
             <motion.div

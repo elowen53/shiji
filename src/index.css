@@ -242,12 +242,25 @@
   .macro-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    padding: 12px 0;
+    padding-top: 14px;
     border-top: 1px solid rgba(70, 88, 61, 0.16);
-    border-bottom: 1px solid rgba(70, 88, 61, 0.16);
   }
 
+  .macro-grid > div { padding: 0 12px; }
+  .macro-grid > div:first-child { padding-left: 0; }
+  .macro-grid > div:last-child { padding-right: 0; }
   .macro-grid > div + div { border-left: 1px solid rgba(70, 88, 61, 0.16); }
+
+  /* 吸顶栏：滚动时停在顶部，半透明磨砂背景 */
+  .page-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 10px 24px 12px;
+    background: rgb(var(--color-grouped) / 0.88);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
 
   .search-field {
     display: flex;
@@ -292,7 +305,7 @@
   .bottom-sheet button[aria-label='返回'] { width: 44px; height: 44px; }
 
   @media (max-width: 360px) {
-    .page-header { padding-left: 18px; padding-right: 18px; }
+    .page-header, .page-sticky { padding-left: 18px; padding-right: 18px; }
     .page-content { padding-left: 14px; padding-right: 14px; }
     .nutrition-card { padding-left: 16px; padding-right: 16px; }
   }

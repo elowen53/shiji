@@ -36,6 +36,19 @@ function balanceLabel(v: number): string {
   return `${r < 0 ? '缺口' : '盈余'} ${Math.abs(r).toLocaleString('en-US')} 千卡`
 }
 
+/** 刻度：取 100 / 200 / 250 / 500 / 1000… 的整步长，并始终包含 0 */
+function kcalTicks(data: BalanceChartPoint[]): number[] {
+  const values = data.flatMap((p) => [p.balance ?? 0, p.ma ?? 0])
+  const min = Math.min(0, ...values)
+  const max = Math.max(0, ...values)
+  const raw = (max - min) / 4 || 100
+  const pow = 10 ** Math.floor(Math.log10(raw))
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((v) => v >= raw)!
+  const ticks: number[] = []
+  for (let v = Math.floor(min / step) * step; v <= Math.ceil(max / step) * step; v += step) ticks.push(v)
+  return ticks
+}
+
 function BalanceTooltip({
   active,
   payload,
@@ -80,6 +93,7 @@ export default function EnergyBalanceCard({ data, summary }: EnergyBalanceCardPr
   }
 
   const dense = data.length > 45
+  const ticks = kcalTicks(data)
   return (
     <section className="ios-card px-2 py-4">
       <div className="mb-3 px-3">
@@ -122,7 +136,10 @@ export default function EnergyBalanceCard({ data, summary }: EnergyBalanceCardPr
             tickLine={false}
             minTickGap={36}
           />
+          {/* 柱子必须从 0 起：全是缺口时也要把 0 纳入坐标范围 */}
           <YAxis
+            domain={[ticks[0], ticks[ticks.length - 1]]}
+            ticks={ticks}
             tick={{ fontSize: 11, fill: TICK_INK }}
             axisLine={false}
             tickLine={false}
