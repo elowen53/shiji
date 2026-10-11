@@ -50,3 +50,16 @@ alter table daily_metrics add column if not exists waist_cm numeric;
 
 -- 单人使用：关闭行级安全（anon key 即访问凭证，请勿泄露）
 alter table daily_metrics disable row level security;
+
+-- 三大营养素目标：单行表，按「每公斤体重克数」存储，空值表示未设置该项目标
+-- 每日目标 = 系数 × 截至当天最近一次体重
+create table if not exists macro_targets (
+  id int primary key default 1 check (id = 1),
+  protein_g_per_kg numeric,
+  fat_g_per_kg numeric,
+  carbs_g_per_kg numeric,
+  updated_at timestamptz not null default now()
+);
+
+-- 单人使用：关闭行级安全（anon key 即访问凭证，请勿泄露）
+alter table macro_targets disable row level security;

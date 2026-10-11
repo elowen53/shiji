@@ -62,3 +62,10 @@ export interface MetricInput {
   waist_cm: number | null
   burn_kcal: number | null
 }
+
+/** 三大营养素目标系数（克 / 公斤体重）；null 表示未设置该项目标 */
+export interface MacroTargets {
+  protein_g_per_kg: number | null
+  fat_g_per_kg: number | null
+  carbs_g_per_kg: number | null
+}

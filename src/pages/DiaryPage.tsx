@@ -5,14 +5,16 @@ import BrandMasthead from '@/components/BrandMasthead'
 import AddEntrySheet from '@/components/AddEntrySheet'
 import BottomSheet from '@/components/BottomSheet'
 import EntryRow from '@/components/EntryRow'
+import MacroTargetsSheet from '@/components/MacroTargetsSheet'
 import MetricsSheet from '@/components/MetricsSheet'
 import QuantitySheet from '@/components/QuantitySheet'
 import { useEntries } from '@/hooks/useEntries'
+import { useMacroTargets } from '@/hooks/useMacroTargets'
 import { useMetrics } from '@/hooks/useMetrics'
 import { useToast } from '@/lib/toast'
 import { addDays, formatDisplay, isToday, todayKey, weekdayLabel } from '@/lib/date'
 import { fmtKcal, fmtMacro } from '@/lib/format'
-import type { DayTotals, Entry, EntrySource, Food, MetricInput } from '@/types'
+import type { DayTotals, Entry, EntrySource, Food, MacroTargets, MetricInput } from '@/types'
 
 interface DiaryPageProps {
   foods: Food[]
@@ -55,11 +57,13 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
     copyFromPrevDay,
   } = useEntries(dateKey)
   const { metric, latestWeight, save: saveMetric } = useMetrics(dateKey)
+  const { targets, save: saveTargets } = useMacroTargets()
 
   const [addOpen, setAddOpen] = useState(false)
   const [actionEntry, setActionEntry] = useState<Entry | null>(null)
   const [editEntry, setEditEntry] = useState<Entry | null>(null)
   const [metricsOpen, setMetricsOpen] = useState(false)
+  const [targetsOpen, setTargetsOpen] = useState(false)
   const [copying, setCopying] = useState(false)
 
   const totals: DayTotals = useMemo(
@@ -76,14 +80,31 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
     [entries],
   )
 
-  /** 蛋白质 g/kg：当日蛋白质总量 ÷ 最近体重；无体重数据为 null */
-  const proteinPerKg =
-    latestWeight != null && latestWeight > 0 ? totals.protein / latestWeight : null
-  /** 蛋白质目标：所选日期最近一次有效体重 × 2 g/kg，避免历史日期引用未来体重。 */
-  const proteinGoal =
-    latestWeight != null && latestWeight > 0 ? latestWeight * 2 : null
-  const proteinCompletion =
-    proteinGoal != null ? Math.round((totals.protein / proteinGoal) * 100) : null
+  const hasWeight = latestWeight != null && latestWeight > 0
+  /** 当日摄入 g/kg：营养素总量 ÷ 所选日期最近一次有效体重（避免历史日期引用未来体重）；无体重为 null */
+  const perKg = (grams: number) => (hasWeight ? grams / latestWeight! : null)
+
+  /** 三大营养素：当日摄入与目标（目标 = g/kg 系数 × 最近体重，未设置或无体重为 null） */
+  const macros = (
+    [
+      ['蛋白质', totals.protein, targets?.protein_g_per_kg, 'text-brand', 'bg-brand'],
+      ['脂肪', totals.fat, targets?.fat_g_per_kg, 'text-warn', 'bg-warn'],
+      ['碳水', totals.carbs, targets?.carbs_g_per_kg, 'text-success', 'bg-success'],
+    ] as const
+  ).map(([label, value, factor, textClass, barClass]) => {
+    const goal = hasWeight && factor != null ? factor * latestWeight! : null
+    return {
+      label,
+      value,
+      factor: factor ?? null,
+      goal,
+      completion: goal != null ? Math.round((value / goal) * 100) : null,
+      textClass,
+      barClass,
+    }
+  })
+  const goalRows = macros.filter((m) => m.goal != null)
+  const hasAnyTarget = macros.some((m) => m.factor != null)
 
   const handleCopyPrevDay = async () => {
     if (copying) return
@@ -113,6 +134,12 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
     const ok = await updateEntryQuantity(entry, quantity)
     toast(ok ? '已更新' : '保存失败，请检查网络', ok ? 'success' : 'error')
     return ok
+  }
+
+  const handleSaveTargets = async (input: MacroTargets) => {
+    const err = await saveTargets(input)
+    toast(err ?? '目标已更新', err ? 'error' : 'success')
+    return err == null
   }
 
   const handleSaveMetric = async (input: MetricInput) => {
@@ -187,58 +214,81 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
             )}
           </div>
           <div className="macro-grid">
-            {(
-              [
-                [
-                  '蛋白质',
-                  totals.protein,
-                  'text-brand',
-                  proteinPerKg != null ? `${proteinPerKg.toFixed(1)} g/kg` : '',
-                ],
-                ['脂肪', totals.fat, 'text-warn', ''],
-                ['碳水', totals.carbs, 'text-success', ''],
-              ] as const
-            ).map(([label, v, colorClass, sub]) => (
+            {macros.map(({ label, value, textClass }) => (
               <div key={label} className="flex-1 text-center">
-                <div className={`tnum text-[22px] font-medium ${colorClass}`}>
-                  {fmtMacro(v)}
+                <div className={`tnum text-[22px] font-medium ${textClass}`}>
+                  {fmtMacro(value)}
                   <span className="text-[12px] font-normal text-ink-2"> g</span>
                 </div>
                 <div className="mt-[1px] text-[12px] text-ink-2">{label}</div>
-                {proteinPerKg != null && (
-                  <div className="tnum mt-[1px] h-4 text-[12px] leading-4 text-ink-2">{sub}</div>
+                {hasWeight && (
+                  <div className="tnum mt-[1px] h-4 text-[12px] leading-4 text-ink-2">
+                    {perKg(value)!.toFixed(1)} g/kg
+                  </div>
                 )}
               </div>
             ))}
           </div>
-          {proteinGoal != null && proteinCompletion != null ? (
-            <div className="mt-3 px-1">
-              <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                <span className="font-medium text-ink">蛋白质目标</span>
-                <span className="tnum text-ink-2">
-                  {fmtMacro(totals.protein)} / {fmtMacro(proteinGoal)} g · {proteinCompletion}%
+          {goalRows.length > 0 ? (
+            <div className="mt-3 space-y-3 px-1">
+              {goalRows.map(({ label, value, factor, goal, completion, barClass }) => {
+                const pct = Math.min(100, Math.max(0, completion!))
+                return (
+                  <div key={label}>
+                    <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                      <span className="font-medium text-ink">
+                        {label}目标
+                        <span className="tnum ml-1 text-[11px] font-normal text-ink-2">
+                          {fmtMacro(factor!)} g/kg
+                        </span>
+                      </span>
+                      <span className="tnum text-ink-2">
+                        {fmtMacro(value)} / {fmtMacro(goal!)} g · {completion}%
+                      </span>
+                    </div>
+                    <div
+                      className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-brand/10"
+                      role="progressbar"
+                      aria-label={`${label}目标完成度`}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={pct}
+                    >
+                      <div
+                        className={`h-full rounded-full ${barClass} transition-[width] duration-300`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+              <div className="flex items-center justify-between gap-3">
+                <span className="tnum text-[11px] text-ink-2">
+                  按最近体重 {fmtMacro(latestWeight!)} kg 换算
                 </span>
-              </div>
-              <div
-                className="mt-2 h-1.5 overflow-hidden rounded-full bg-brand/10"
-                role="progressbar"
-                aria-label="蛋白质目标完成度"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.min(100, Math.max(0, proteinCompletion))}
-              >
-                <div
-                  className="h-full rounded-full bg-brand transition-[width] duration-300"
-                  style={{ width: `${Math.min(100, Math.max(0, proteinCompletion))}%` }}
-                />
-              </div>
-              <div className="tnum mt-1.5 text-[11px] text-ink-2">
-                按最近体重 {fmtMacro(latestWeight!)} kg × 2 g/kg 计算
+                <button
+                  type="button"
+                  onClick={() => setTargetsOpen(true)}
+                  className="-my-2 h-8 rounded-full px-2 text-[12px] font-medium text-brand active:bg-brand/10"
+                >
+                  调整目标
+                </button>
               </div>
             </div>
           ) : (
-            <div className="mt-3 px-1 text-[12px] text-ink-2">
-              记录体重后生成蛋白质目标（2 g/kg）
+            <div className="mt-3 flex items-center justify-between gap-3 px-1">
+              <span className="text-[12px] text-ink-2">
+                {!hasWeight && hasAnyTarget
+                  ? '记录体重后按 g/kg 生成每日目标'
+                  : '按体重 g/kg 设置三大营养素目标'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setTargetsOpen(true)}
+                className="-my-2 h-8 shrink-0 rounded-full px-2 text-[12px] font-medium text-brand active:bg-brand/10"
+              >
+                {hasAnyTarget ? '调整目标' : '设置目标'}
+              </button>
             </div>
           )}
         </section>
@@ -424,6 +474,14 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         metric={metric}
         onClose={() => setMetricsOpen(false)}
         onSave={handleSaveMetric}
+      />
+
+      <MacroTargetsSheet
+        open={targetsOpen}
+        targets={targets}
+        latestWeight={hasWeight ? latestWeight : null}
+        onClose={() => setTargetsOpen(false)}
+        onSave={handleSaveTargets}
       />
     </div>
   )
