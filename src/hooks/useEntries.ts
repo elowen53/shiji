@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { addDays } from '@/lib/date'
-import type { Entry, Food } from '@/types'
+import type { Entry, EntrySource } from '@/types'
 
 export interface EntriesApi {
   entries: Entry[]
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
-  /** 保存时把食物营养按数量折算后做快照冗余存储 */
-  addEntry: (food: Food, quantity: number, entryDate: string) => Promise<boolean>
+  /** 保存时把食物营养按数量折算后做快照冗余存储；临时食物无 id，food_id 存 null，不进入食物库 */
+  addEntry: (food: EntrySource, quantity: number, entryDate: string) => Promise<boolean>
   updateEntryQuantity: (entry: Entry, quantity: number) => Promise<boolean>
   deleteEntry: (id: string) => Promise<boolean>
   /** 前一天的记录条数（仅当天为空时有意义，用于「复制昨天的记录」） */
@@ -96,11 +96,11 @@ export function useEntries(entryDate: string): EntriesApi {
   }, [entryDate])
 
   const addEntry = useCallback(
-    async (food: Food, quantity: number, date: string) => {
+    async (food: EntrySource, quantity: number, date: string) => {
       if (!supabase) return false
       const payload = {
         entry_date: date,
-        food_id: food.id,
+        food_id: food.id ?? null,
         food_name: food.name,
         unit: food.unit,
         quantity,
@@ -118,6 +118,7 @@ export function useEntries(entryDate: string): EntriesApi {
         setError(err.message)
         return false
       }
+      setError(null)
       if (date === entryDate) {
         setEntries((prev) => [...prev, data as Entry])
       }

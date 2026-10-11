@@ -37,6 +37,9 @@ export interface FoodInput {
   carbs: number
 }
 
+/** 添加记录的来源：食物库中的食物（带 id），或不入库的临时食物（无 id） */
+export type EntrySource = FoodInput & { id?: string }
+
 export interface DayTotals {
   kcal: number
   protein: number

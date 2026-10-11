@@ -12,7 +12,7 @@ import { useMetrics } from '@/hooks/useMetrics'
 import { useToast } from '@/lib/toast'
 import { addDays, formatDisplay, isToday, todayKey, weekdayLabel } from '@/lib/date'
 import { fmtKcal, fmtMacro } from '@/lib/format'
-import type { DayTotals, Entry, Food, MetricInput } from '@/types'
+import type { DayTotals, Entry, EntrySource, Food, MetricInput } from '@/types'
 
 interface DiaryPageProps {
   foods: Food[]
@@ -96,7 +96,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
     )
   }
 
-  const handleAdd = async (food: Food, quantity: number) => {
+  const handleAdd = async (food: EntrySource, quantity: number) => {
     const ok = await addEntry(food, quantity, dateKey)
     if (ok) toast('已保存', 'success')
     else toast('保存失败，请检查网络', 'error')

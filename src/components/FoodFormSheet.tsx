@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import BottomSheet from '@/components/BottomSheet'
 import type { Food, FoodInput } from '@/types'
+import { kcalFromMacros, parseManualKcal, parseNum } from '@/lib/nutrition'
 
 interface FoodFormSheetProps {
   open: boolean
@@ -17,20 +18,6 @@ const NUM_FIELDS: { key: 'protein' | 'fat' | 'carbs'; label: string; placeholder
   { key: 'fat', label: '脂肪（克）', placeholder: '0' },
   { key: 'carbs', label: '碳水（克）', placeholder: '0' },
 ]
-
-/** 三大营养素 → 热量换算系数（千卡/克） */
-const KCAL_PER_G = { protein: 4, fat: 9, carbs: 4 } as const
-
-const parseNum = (s: string) => {
-  const v = parseFloat(s)
-  return Number.isFinite(v) && v >= 0 ? v : 0
-}
-
-/** 按三大营养素折算热量（与表单逻辑一致） */
-const kcalFromMacros = (protein: number, fat: number, carbs: number) =>
-  Math.round(
-    (protein * KCAL_PER_G.protein + fat * KCAL_PER_G.fat + carbs * KCAL_PER_G.carbs) * 10,
-  ) / 10
 
 /** 新增 / 编辑食物：名称与单位完全自定义，营养值为每单位含量 */
 export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }: FoodFormSheetProps) {
@@ -75,10 +62,7 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
   const autoKcal = kcalFromMacros(parseNum(nums.protein), parseNum(nums.fat), parseNum(nums.carbs))
 
   /** 手动热量：填写正数则覆盖自动值 */
-  const manualKcalValue = (() => {
-    const v = parseFloat(manualKcal)
-    return Number.isFinite(v) && v > 0 ? Math.round(v * 10) / 10 : null
-  })()
+  const manualKcalValue = parseManualKcal(manualKcal)
 
   const handleSave = async () => {
     if (!valid || saving) return
