@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { X } from 'lucide-react'
 import BottomSheet from '@/components/BottomSheet'
 import { fmtKcal, fmtMacro } from '@/lib/format'
@@ -26,7 +26,8 @@ const FIELDS: { key: FieldKey; label: string; hint: string }[] = [
 /** 空值或 0 视为不设置该项目标 */
 const parseFactor = (s: string): number | null => {
   const v = parseFloat(s)
-  return Number.isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null
+  const rounded = Math.round(v * 100) / 100
+  return Number.isFinite(rounded) && rounded > 0 ? rounded : null
 }
 
 /** 三大营养素目标：按「克 / 公斤体重」设置，每日目标随最近体重自动换算 */
@@ -37,25 +38,30 @@ export default function MacroTargetsSheet({
   onClose,
   onSave,
 }: MacroTargetsSheetProps) {
-  const [values, setValues] = useState<Record<FieldKey, string>>({
-    protein_g_per_kg: '',
-    fat_g_per_kg: '',
-    carbs_g_per_kg: '',
+  return (
+    <BottomSheet open={open} onClose={onClose} maxHeight="82%">
+      <MacroTargetsForm
+        key={JSON.stringify(targets)}
+        targets={targets}
+        latestWeight={latestWeight}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    </BottomSheet>
+  )
+}
+
+function MacroTargetsForm({ targets, latestWeight, onClose, onSave }: Omit<MacroTargetsSheetProps, 'open'>) {
+  // 表单随 Sheet 打开挂载，每次都以最新保存值初始化。
+  const [values, setValues] = useState<Record<FieldKey, string>>(() => {
+    const str = (v: number | null | undefined) => (v != null ? String(v) : '')
+    return {
+      protein_g_per_kg: targets ? str(targets.protein_g_per_kg) : '2',
+      fat_g_per_kg: str(targets?.fat_g_per_kg),
+      carbs_g_per_kg: str(targets?.carbs_g_per_kg),
+    }
   })
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      const str = (v: number | null | undefined) => (v != null ? String(v) : '')
-      setValues({
-        // 从未设置过时沿用原先的 2 g/kg 蛋白质目标作为起点
-        protein_g_per_kg: targets ? str(targets.protein_g_per_kg) : '2',
-        fat_g_per_kg: str(targets?.fat_g_per_kg),
-        carbs_g_per_kg: str(targets?.carbs_g_per_kg),
-      })
-      setSaving(false)
-    }
-  }, [open, targets])
 
   const factors = {
     protein_g_per_kg: parseFactor(values.protein_g_per_kg),
@@ -82,7 +88,7 @@ export default function MacroTargetsSheet({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} maxHeight="82%">
+    <>
       <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-1">
         <div className="w-9" />
         <div className="text-[17px] font-semibold text-ink">每日营养目标</div>
@@ -149,6 +155,6 @@ export default function MacroTargetsSheet({
         </button>
       </div>
       <div className="safe-bottom-pad shrink-0" />
-    </BottomSheet>
+    </>
   )
 }

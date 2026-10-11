@@ -79,6 +79,19 @@ export function useMetrics(entryDate: string): MetricsApi {
         .single()
       if (error) return false
       setMetric(data as DailyMetric)
+      // 体重保存或清空后重新取截至当天的最近体重，让营养目标立即跟随。
+      const { data: latest, error: weightError } = await supabase
+        .from('daily_metrics')
+        .select('weight_kg')
+        .not('weight_kg', 'is', null)
+        .lte('entry_date', entryDate)
+        .order('entry_date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (!weightError) {
+        const w = latest?.weight_kg
+        setLatestWeight(w != null && Number(w) > 0 ? Number(w) : null)
+      }
       return true
     },
     [entryDate],
