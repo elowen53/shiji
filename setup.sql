@@ -30,9 +30,9 @@ create table if not exists entries (
   created_at timestamptz not null default now()
 );
 
--- 单人使用：关闭行级安全（anon key 即访问凭证，请勿泄露）
-alter table foods disable row level security;
-alter table entries disable row level security;
+-- 默认拒绝浏览器访问；建表后继续执行 supabase/migrations/20261011_private_access.sql。
+alter table foods enable row level security;
+alter table entries enable row level security;
 
 create index if not exists entries_entry_date_idx on entries(entry_date);
 
@@ -48,8 +48,7 @@ create table if not exists daily_metrics (
 -- 旧环境升级用（幂等）：已存在 daily_metrics 但缺少 waist_cm 列时执行补齐
 alter table daily_metrics add column if not exists waist_cm numeric;
 
--- 单人使用：关闭行级安全（anon key 即访问凭证，请勿泄露）
-alter table daily_metrics disable row level security;
+alter table daily_metrics enable row level security;
 
 -- 三大营养素目标：单行表，按「每公斤体重克数」存储，空值表示未设置该项目标
 -- 每日目标 = 系数 × 截至当天最近一次体重
@@ -61,5 +60,4 @@ create table if not exists macro_targets (
   updated_at timestamptz not null default now()
 );
 
--- 单人使用：关闭行级安全（anon key 即访问凭证，请勿泄露）
-alter table macro_targets disable row level security;
+alter table macro_targets enable row level security;

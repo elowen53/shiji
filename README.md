@@ -15,6 +15,7 @@
 - **营养目标**：蛋白质 / 脂肪 / 碳水目标各自按「克 / 公斤体重」手动设置，每日目标 = 系数 × 最近一次体重，并显示完成进度
 - **历史不受删改影响**：每条记录保存时冗余营养快照，之后修改或删除食物库中的食物不影响已保存的记录
 - **交互**：iOS 风格左滑删除、底部弹簧 Sheet、毛玻璃底栏、灵动岛 / Home 指示条安全区适配
+- **密码访问**：使用 Supabase Auth 验证访问密码；登录在当前设备持久保存并自动续期，顶部「锁定」会退出当前设备。
 
 ## 技术栈
 
@@ -43,7 +44,7 @@ VITE_SUPABASE_ANON_KEY=你的 publishable key
 
 两种方式任选其一：
 
-1. **SQL Editor**：在 Supabase 控制台 SQL Editor 整段执行根目录的 `setup.sql`（幂等，可重复执行）
+1. **SQL Editor**：依次执行根目录的 `setup.sql` 和 `supabase/migrations/20261011_private_access.sql`（幂等，可重复执行）
 2. **脚本**：在 <https://supabase.com/dashboard/account/tokens> 生成 Personal Access Token 后运行：
 
 ```bash
@@ -59,7 +60,17 @@ SUPABASE_ACCESS_TOKEN=sbp_xxx VITE_SUPABASE_ANON_KEY=你的key node scripts/setu
 | `daily_metrics` | 每日指标：一天一行（日期主键），体重、腰围与总消耗 |
 | `macro_targets` | 营养目标：单行表（id = 1），蛋白质 / 脂肪 / 碳水的 g/kg 系数，空值为未设置 |
 
-三张表均已关闭 RLS（单人使用，anon key 即访问凭证，请勿泄露）。
+四张表均启用 RLS，撤销匿名访问，只允许 `owner@shiji.local` 的有效登录会话执行增删改查。公开的 publishable / anon key 不能访问数据；即使另一个账号登录也没有数据权限。锁定时会撤销当前会话，旧访问令牌也无法继续读写这些表。
+
+## 访问账号与 iPhone 登录
+
+首次部署时，由管理员在服务端通过 Supabase Auth Admin API 创建 `owner@shiji.local`，设定访问密码并确认邮箱（`email_confirm: true`）。这个地址仅作为内部账号标识，不发送邮件。密码和 service role / secret key 不得放入前端环境变量、源码或 Git；前端仅使用公开 API key。
+
+输入一次密码后，Supabase 将会话保存在当前浏览器并自动刷新。默认会话没有固定到期时间；清除网站数据、使用无痕浏览、手动锁定或管理员撤销会话后需重新登录。iPhone 上尽量固定使用 Safari 或主屏幕入口，同一入口可复用登录；不同入口可能使用不同的网站存储。登录页面支持系统密码自动填充。
+
+生产项目应在 Authentication → Sign In / Providers 关闭新用户注册。不要为其他账号添加放宽访问的策略。重新执行建表脚本不会关闭 RLS。
+
+权限回归检查可运行 `npm run test:access`，通过本地环境变量提供 `SUPABASE_URL`、`SUPABASE_PUBLISHABLE_KEY` 和 `SHIJI_OWNER_PASSWORD`。它检查匿名访问被拒绝、专用账号可读取、退出后旧令牌失效；不会修改业务数据。不要把密码写入提交的文件。
 
 ## 部署
 

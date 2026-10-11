@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import ConfigGate from '@/components/ConfigGate'
+import AuthGate from '@/components/AuthGate'
 import TabBar, { type TabKey } from '@/components/TabBar'
 import DiaryPage from '@/pages/DiaryPage'
 import FoodsPage from '@/pages/FoodsPage'
@@ -13,7 +14,7 @@ export default function App() {
   if (!isSupabaseConfigured) {
     return <ConfigGate />
   }
-  return <ConfiguredApp />
+  return <AuthGate><ConfiguredApp /></AuthGate>
 }
 
 const TAB_ORDER: TabKey[] = ['diary', 'trends', 'foods']

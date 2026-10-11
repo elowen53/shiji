@@ -15,7 +15,8 @@ if (!token) {
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
-const sql = readFileSync(join(here, '..', 'setup.sql'), 'utf8');
+const sql = readFileSync(join(here, '..', 'setup.sql'), 'utf8') + '\n' +
+  readFileSync(join(here, '..', 'supabase/migrations/20261011_private_access.sql'), 'utf8');
 
 console.log(`→ 正在项目 ${PROJECT_REF} 上执行建表 SQL ...`);
 
@@ -39,21 +40,21 @@ if (!res.ok) {
 
 console.log('✅ SQL 执行成功:', text);
 
-// 通过 PostgREST 验证两张表已出现在 schema cache
-console.log('→ 等待 schema cache 刷新并验证表结构 ...');
+// 未登录请求必须被数据库拒绝；publishable key 不是访问凭证。
+console.log('→ 等待 schema cache 刷新并验证匿名访问已关闭 ...');
 await new Promise((r) => setTimeout(r, 2000));
 
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
 if (anonKey) {
-  for (const table of ['foods', 'entries']) {
+  for (const table of ['foods', 'entries', 'daily_metrics', 'macro_targets']) {
     const check = await fetch(
       `https://${PROJECT_REF}.supabase.co/rest/v1/${table}?select=*&limit=0`,
-      { headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` } }
+      { headers: { apikey: anonKey } }
     );
     console.log(
-      check.ok ? `✅ 表 ${table} 可访问` : `❌ 表 ${table} 验证失败 (HTTP ${check.status})`
+      [401, 403].includes(check.status) ? `✅ 表 ${table} 拒绝匿名访问` : `❌ 表 ${table} 权限验证失败 (HTTP ${check.status})`
     );
-    if (!check.ok) process.exit(1);
+    if (![401, 403].includes(check.status)) process.exit(1);
   }
 }
-console.log('🎉 全部完成，应用可以直接使用了');
+console.log('🎉 数据库初始化完成；专用账号配置见 README。');
