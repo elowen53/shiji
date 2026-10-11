@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import AnimatedNumber from '@/components/motion/AnimatedNumber'
 import { formatDisplay } from '@/lib/date'
 import { fmtKcal, fmtMacro } from '@/lib/format'
 import { KCAL_PER_KG, type BalanceChartPoint, type BalanceSummary } from '@/lib/energy'
@@ -100,7 +101,7 @@ export default function EnergyBalanceCard({ data, summary }: EnergyBalanceCardPr
         <div className="text-[12px] text-ink-2">平均每日</div>
         <div className="tnum mt-0.5 flex items-baseline gap-1.5">
           <span className="editorial-title text-[32px] leading-none text-ink">
-            {Math.round(summary.avg) === 0 ? '持平' : Math.abs(Math.round(summary.avg)).toLocaleString('en-US')}
+            {Math.round(summary.avg) === 0 ? '持平' : <AnimatedNumber value={Math.abs(Math.round(summary.avg))} />}
           </span>
           {Math.round(summary.avg) !== 0 && (
             <span className="text-[14px] text-ink-2">千卡{summary.avg < 0 ? '缺口' : '盈余'}</span>
@@ -148,7 +149,7 @@ export default function EnergyBalanceCard({ data, summary }: EnergyBalanceCardPr
           />
           <Tooltip content={<BalanceTooltip />} cursor={{ fill: 'rgba(60,60,67,0.06)' }} />
           <ReferenceLine y={0} stroke={TICK_INK} strokeOpacity={0.5} />
-          <Bar dataKey="balance" maxBarSize={14} radius={dense ? [1.5, 1.5, 0, 0] : [4, 4, 0, 0]} isAnimationActive={false}>
+          <Bar dataKey="balance" maxBarSize={14} radius={dense ? [1.5, 1.5, 0, 0] : [4, 4, 0, 0]} animationDuration={700} animationEasing="ease-out">
             {data.map((p) => (
               <Cell key={p.date} fill={p.balance != null && p.balance > 0 ? SURPLUS : DEFICIT} />
             ))}

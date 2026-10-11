@@ -34,7 +34,7 @@ function ConfiguredApp() {
       <ToastProvider>
         <div className="app-shell">
           <div className="relative min-h-0 flex-1">
-            <AnimatePresence mode="wait" initial={false} custom={dirRef.current}>
+            <AnimatePresence mode="wait" custom={dirRef.current}>
               <motion.div
                 key={tab}
                 className="h-full"

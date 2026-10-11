@@ -92,7 +92,7 @@ export default function QuantitySheet({ entry, onClose, onSave, onDelete }: Quan
             type="button"
             disabled={saving}
             onClick={handleSave}
-            className="flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
+            className="pressable flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
           >
             {saving ? '保存中…' : '保存'}
           </button>
@@ -100,7 +100,7 @@ export default function QuantitySheet({ entry, onClose, onSave, onDelete }: Quan
             type="button"
             disabled={saving}
             onClick={() => onDelete(entry)}
-            className="mt-3 flex h-[52px] w-full items-center justify-center rounded-2xl bg-surface text-[17px] font-semibold text-danger active:bg-grouped disabled:opacity-40"
+            className="pressable mt-3 flex h-[52px] w-full items-center justify-center rounded-2xl bg-surface text-[17px] font-semibold text-danger active:bg-grouped disabled:opacity-40"
           >
             删除这条记录
           </button>

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { LockKeyhole } from 'lucide-react'
+import AnimatedGroup from '@/components/motion/AnimatedGroup'
 import { OWNER_EMAIL } from '@/lib/auth'
 import { AccessContext } from '@/lib/access'
 import { supabase } from '@/lib/supabase'
@@ -67,13 +68,13 @@ function SessionGate({ session, children }: { session: Session; children: ReactN
 function GateShell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell safe-top safe-bottom-pad items-center justify-center overflow-y-auto px-8 text-center">
-      <div className="my-8 w-full">
+      <AnimatedGroup className="my-8 w-full">
         <div className="mb-6 text-[11px] tracking-[0.2em] text-brand">食记 · THE DAILY JOURNAL</div>
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[22px] bg-surface shadow-sm">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[22px] bg-surface shadow-[var(--shadow-float)]">
           <LockKeyhole size={32} className="text-brand" strokeWidth={1.6} />
         </div>
         {children}
-      </div>
+      </AnimatedGroup>
     </div>
   )
 }
@@ -111,7 +112,7 @@ function PasswordForm({ notice }: { notice?: string }) {
         <label htmlFor="access-password" className="mb-2 block text-[13px] font-medium text-ink-2">访问密码</label>
         <input id="access-password" name="password" type="password" autoComplete="current-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} required disabled={busy} value={password} onChange={e => setPassword(e.target.value)} className="w-full rounded-2xl border border-brand/20 bg-surface px-4 py-3.5 text-[16px] text-ink" />
         {(error || notice) && <p role="alert" className="mt-3 text-[13px] text-danger">{error || notice}</p>}
-        <button type="submit" disabled={busy || !password} className="mt-5 w-full rounded-2xl bg-brand py-3.5 text-[16px] font-medium text-white disabled:opacity-50">{busy ? '正在打开…' : '打开食记'}</button>
+        <button type="submit" disabled={busy || !password} className="pressable mt-5 w-full rounded-2xl bg-brand py-3.5 text-[16px] font-medium text-white disabled:opacity-50">{busy ? '正在打开…' : '打开食记'}</button>
       </form>
       <p className="mt-5 text-[12px] leading-relaxed text-ink-2">此设备会记住登录。主动锁定或清除浏览器数据后，需要重新输入密码。</p>
     </GateShell>

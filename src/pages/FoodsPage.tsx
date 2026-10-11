@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Plus, Search, Sprout } from 'lucide-react'
 import BrandMasthead from '@/components/BrandMasthead'
 import FoodFormSheet from '@/components/FoodFormSheet'
+import AnimatedGroup from '@/components/motion/AnimatedGroup'
 import { useToast } from '@/lib/toast'
 import type { FoodsApi } from '@/hooks/useFoods'
 import { fmtKcal, fmtMacro } from '@/lib/format'
@@ -51,7 +52,7 @@ export default function FoodsPage({ foodsApi }: FoodsPageProps) {
             </button>
           </div>
         </header>
-        <div className="page-content">
+        <AnimatedGroup className="page-content">
           <div className="search-field mb-4">
             <Search size={17} className="shrink-0 text-ink-2" />
             <input
@@ -129,7 +130,7 @@ export default function FoodsPage({ foodsApi }: FoodsPageProps) {
               ))}
             </motion.div>
           )}
-        </div>
+        </AnimatedGroup>
       </main>
 
       <FoodFormSheet

@@ -157,7 +157,8 @@ export default function WeightVsEnergyCard({ result }: WeightVsEnergyCardProps) 
             strokeDasharray="5 4"
             dot={false}
             activeDot={{ r: 4, fill: EXPECTED, strokeWidth: 0 }}
-            isAnimationActive={false}
+            animationDuration={900}
+            animationEasing="ease-out"
           />
           <Line
             type="monotone"
@@ -166,7 +167,8 @@ export default function WeightVsEnergyCard({ result }: WeightVsEnergyCardProps) 
             strokeWidth={2.5}
             dot={{ r: 2.5, fill: ACTUAL, strokeWidth: 0 }}
             activeDot={{ r: 4.5, fill: ACTUAL, strokeWidth: 0 }}
-            isAnimationActive={false}
+            animationDuration={900}
+            animationEasing="ease-out"
           />
         </LineChart>
       </ResponsiveContainer>

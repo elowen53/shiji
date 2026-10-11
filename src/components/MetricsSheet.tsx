@@ -127,7 +127,7 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
           type="button"
           disabled={!hasAnyValue || saving}
           onClick={handleSave}
-          className="mb-3 flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-40"
+          className="pressable mb-3 flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-40"
         >
           {saving ? '保存中…' : '保存'}
         </button>
@@ -137,7 +137,7 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
             type="button"
             disabled={saving}
             onClick={handleClear}
-            className="flex h-[52px] w-full items-center justify-center rounded-2xl bg-surface text-[17px] font-semibold text-danger active:bg-grouped disabled:opacity-40"
+            className="pressable flex h-[52px] w-full items-center justify-center rounded-2xl bg-surface text-[17px] font-semibold text-danger active:bg-grouped disabled:opacity-40"
           >
             清除当天指标
           </button>

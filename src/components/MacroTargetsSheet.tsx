@@ -149,7 +149,7 @@ function MacroTargetsForm({ targets, latestWeight, onClose, onSave }: Omit<Macro
           type="button"
           disabled={saving}
           onClick={handleSave}
-          className="flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-40"
+          className="pressable flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-40"
         >
           {saving ? '保存中…' : '保存'}
         </button>

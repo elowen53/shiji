@@ -4,6 +4,7 @@ import { Share, ChartNoAxesCombined, Ruler, Scale } from 'lucide-react'
 import BrandMasthead from '@/components/BrandMasthead'
 import EnergyBalanceCard from '@/components/EnergyBalanceCard'
 import ExportSheet from '@/components/ExportSheet'
+import AnimatedGroup from '@/components/motion/AnimatedGroup'
 import LatestStatCard from '@/components/LatestStatCard'
 import TrendChartCard from '@/components/TrendChartCard'
 import WeightSummaryCard from '@/components/WeightSummaryCard'
@@ -135,7 +136,7 @@ export default function TrendsPage() {
               </div>
             </div>
           ) : (
-            <>
+            <AnimatedGroup>
               {/* 最新值大卡（体重 / 腰围） */}
               {weightStat && weightWeekly && (
                 <WeightSummaryCard
@@ -236,7 +237,7 @@ export default function TrendsPage() {
                   hint="去「记录」页点今日指标，添加腰围"
                 />
               )}
-            </>
+            </AnimatedGroup>
           )}
         </div>
       </main>

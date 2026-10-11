@@ -1,3 +1,4 @@
+import AnimatedNumber from '@/components/motion/AnimatedNumber'
 import type { WeeklyTrendSummary } from '@/lib/trend'
 
 interface WeightSummaryCardProps {
@@ -30,7 +31,7 @@ export default function WeightSummaryCard({
           <span>最新体重</span><span className="text-[9px] tracking-[0.16em]" aria-hidden="true">BODY WEIGHT</span>
         </div>
         <div className="tnum editorial-title text-[48px] leading-none text-brand">
-          {value.toFixed(1)}
+          <AnimatedNumber value={value} preset="fixed1" />
           <span className="ml-1 text-[16px] font-normal text-ink-2">kg</span>
         </div>
         <div className="mt-1.5 text-[13px] text-ink-2">{dateLabel}</div>
@@ -41,7 +42,7 @@ export default function WeightSummaryCard({
         <div className="px-2 text-center">
           <div className="text-[11px] text-ink-2">7日平均</div>
           <div className="tnum mt-1 text-[17px] font-semibold text-ink">
-            {weekly.currentAverage.toFixed(1)}
+            <AnimatedNumber value={weekly.currentAverage} preset="fixed1" />
             <span className="ml-0.5 text-[11px] font-normal text-ink-2">kg</span>
           </div>
         </div>

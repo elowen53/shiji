@@ -185,7 +185,7 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
           type="button"
           disabled={!valid || saving}
           onClick={handleSave}
-          className="mb-3 flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-40"
+          className="pressable mb-3 flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-40"
         >
           {saving ? '保存中…' : '保存'}
         </button>
@@ -194,7 +194,7 @@ export default function FoodFormSheet({ open, food, onClose, onSave, onDelete }:
           <button
             type="button"
             onClick={handleDelete}
-            className={`flex h-[52px] w-full items-center justify-center rounded-2xl text-[17px] font-semibold transition-colors ${
+            className={`pressable flex h-[52px] w-full items-center justify-center rounded-2xl text-[17px] font-semibold transition-colors ${
               confirmingDelete
                 ? 'bg-danger text-white'
                 : 'bg-surface text-danger'

@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Plus, Scale, Utensils } from 'lucide-react'
 import BrandMasthead from '@/components/BrandMasthead'
 import AddEntrySheet from '@/components/AddEntrySheet'
 import EntryRow from '@/components/EntryRow'
+import AnimatedGroup from '@/components/motion/AnimatedGroup'
+import AnimatedNumber from '@/components/motion/AnimatedNumber'
+import ProgressiveBlur from '@/components/motion/ProgressiveBlur'
 import MacroTargetsSheet from '@/components/MacroTargetsSheet'
 import MetricsSheet from '@/components/MetricsSheet'
 import QuantitySheet from '@/components/QuantitySheet'
@@ -65,6 +68,25 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
   const [metricsOpen, setMetricsOpen] = useState(false)
   const [targetsOpen, setTargetsOpen] = useState(false)
   const [copying, setCopying] = useState(false)
+
+  /** 切换日期的方向（1 = 往后，-1 = 往前），用于内容横向滑入；0 表示首次进入 */
+  const [dateDir, setDateDir] = useState(0)
+  const goToDate = (next: string) => {
+    if (next === dateKey) return
+    setDateDir(next > dateKey ? 1 : -1)
+    setDateKey(next)
+  }
+
+  /** 滚动状态：日期栏吸顶后显示分隔；向下滚动时「记一笔」收起为图标 */
+  const mainRef = useRef<HTMLElement>(null)
+  const { scrollY } = useScroll({ container: mainRef })
+  const [stuck, setStuck] = useState(false)
+  const [fabCompact, setFabCompact] = useState(false)
+  useMotionValueEvent(scrollY, 'change', (y) => {
+    const prev = scrollY.getPrevious() ?? 0
+    setStuck(y > 56)
+    if (Math.abs(y - prev) > 2) setFabCompact(y > 120 && y > prev)
+  })
 
   const totals: DayTotals = useMemo(
     () =>
@@ -171,12 +193,14 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <main className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-[160px]">
+      <main ref={mainRef} className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-[170px]">
         <div className="page-header -mb-2.5 pb-0">
           <BrandMasthead />
         </div>
         {/* 日期栏：滚动时吸顶，品牌栏随内容滚走 */}
-        <div className="page-sticky flex items-center justify-between gap-3">
+        <div className="page-sticky flex items-center justify-between gap-3" data-stuck={stuck}>
+          <ProgressiveBlur direction="top" layers={4} intensity={0.8} className="absolute inset-x-0 top-full h-4" />
+          <div className="sticky-fade" aria-hidden="true" />
           <div>
             <div className="mb-1 text-[12px] tracking-wide text-ink-2">
               {weekdayLabel(dateKey)} · {isToday(dateKey) ? '今日饮食' : '饮食记录'}
@@ -196,19 +220,19 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
           </div>
           <div className="flex items-center gap-1.5">
             {!isToday(dateKey) && (
-              <button type="button" onClick={() => setDateKey(todayKey())}
+              <button type="button" onClick={() => goToDate(todayKey())}
                 className="h-11 rounded-full px-2 text-[13px] font-medium text-brand active:bg-brand/10">
                 今天
               </button>
             )}
-            <button type="button" aria-label="前一天" onClick={() => setDateKey((k) => addDays(k, -1))} className="icon-button">
+            <button type="button" aria-label="前一天" onClick={() => goToDate(addDays(dateKey, -1))} className="icon-button">
               <ChevronLeft size={20} strokeWidth={1.7} />
             </button>
             <button
               type="button"
               aria-label="后一天"
               disabled={!canGoForward}
-              onClick={() => setDateKey((k) => addDays(k, 1))}
+              onClick={() => goToDate(addDays(dateKey, 1))}
               className="icon-button disabled:opacity-35"
             >
               <ChevronRight size={20} strokeWidth={1.7} />
@@ -217,190 +241,201 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         </div>
 
         <div className="page-content">
-          {/* 当日汇总：热量（含目标进度）+ 三大营养素（各自带目标进度） */}
-          <section className="nutrition-card mb-4">
-            <div className="mb-1 flex items-center justify-between">
-              <span className="text-[13px] font-medium text-brand">{isToday(dateKey) ? '今日摄入' : '当日摄入'}</span>
-              <button
-                type="button"
-                onClick={() => setTargetsOpen(true)}
-                className="-my-2 -mr-2 h-9 rounded-full px-2.5 text-[12px] font-medium text-brand active:bg-brand/10"
-              >
-                {hasAnyTarget ? '调整目标' : '设置目标'}
-              </button>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="tnum calorie-number">{fmtKcal(totals.kcal)}</span>
-              <span className="tnum text-[14px] text-ink-2">
-                {kcalGoal != null ? `/ ${fmtKcal(kcalGoal)} 千卡` : '千卡'}
-              </span>
-            </div>
-            {kcalGoal != null && (
-              <ProgressBar pct={kcalPct!} barClass="bg-brand" label="热量目标完成度" className="mt-3 h-2" />
-            )}
-            {(kcalGoal != null || metric?.burn_kcal != null) && (
-              <div className="tnum mt-2 flex items-center justify-between gap-3 text-[12px] text-ink-2">
-                <span>
-                  {kcalGoal == null
-                    ? ''
-                    : totals.kcal <= kcalGoal
-                      ? `还可摄入 ${fmtKcal(kcalGoal - totals.kcal)} 千卡`
-                      : `已超出 ${fmtKcal(totals.kcal - kcalGoal)} 千卡`}
-                </span>
-                {metric?.burn_kcal != null && (
-                  <span>
-                    消耗 {fmtKcal(metric.burn_kcal)} · 净 {fmtKcal(totals.kcal - metric.burn_kcal)}
-                  </span>
-                )}
-              </div>
-            )}
-
-            <div className="macro-grid mt-4">
-              {macros.map(({ label, value, factor, goal, completion, barClass }) => {
-                const kg = perKg(value)
-                return (
-                  <div key={label}>
-                    <div className="flex items-center gap-1.5 text-[12px] text-ink-2">
-                      <span className={`h-2 w-2 rounded-full ${barClass}`} aria-hidden="true" />
-                      {label}
-                    </div>
-                    <div className="tnum mt-1 whitespace-nowrap text-[20px] font-medium leading-7 text-ink">
-                      {fmtGram(value)}
-                      <span className="text-[12px] font-normal text-ink-2">
-                        {goal != null ? ` / ${fmtGram(goal)} g` : ' g'}
-                      </span>
-                    </div>
-                    {goal != null ? (
-                      <ProgressBar pct={completion!} barClass={barClass} label={`${label}目标完成度`} className="mt-1.5 h-1.5" />
-                    ) : (
-                      <div className="mt-1.5 h-1.5 rounded-full bg-brand/5" aria-hidden="true" />
-                    )}
-                    <div className="tnum mt-1.5 text-[11px] text-ink-2">
-                      {kg != null
-                        ? `${kg.toFixed(1)}${factor != null ? ` / ${fmtMacro(factor)}` : ''} g/kg`
-                        : goal != null
-                          ? `${completion}%`
-                          : '—'}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="tnum mt-3 text-[11px] text-ink-2">
-              {hasWeight
-                ? hasAnyTarget
-                  ? `目标按最近体重 ${fmtMacro(latestWeight!)} kg × g/kg 系数换算`
-                  : '设置 g/kg 目标后，按体重自动换算每日克数'
-                : '记录体重后，可按 g/kg 生成每日目标'}
-            </div>
-          </section>
-
-          {/* 今日指标：体重 + 腰围 + 总消耗，点按录入 */}
-          <button
-            type="button"
-            onClick={() => setMetricsOpen(true)}
-            className="ios-card block w-full px-4 py-3 text-left active:bg-grouped"
+          {/* 首次进入：卡片依次淡入；切换日期：整体按方向横向滑入 */}
+          <motion.div
+            key={dateKey}
+            // 不能用 initial={false}：它会被子元素继承，导致首屏的依次淡入失效
+            initial={{ opacity: dateDir === 0 ? 1 : 0, x: dateDir * 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 36 }}
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10">
-                <Scale size={18} className="text-success" />
-              </div>
-              <div className="min-w-0 flex-1 text-[14px] font-medium text-ink">今日指标</div>
-              <ChevronRight size={16} className="shrink-0 text-ink-3" />
-            </div>
-            <div className="mt-3 flex">
-              {(
-                [
-                  ['体重', metric?.weight_kg, 'kg'],
-                  ['腰围', metric?.waist_cm, 'cm'],
-                  ['消耗', metric?.burn_kcal, '千卡'],
-                ] as const
-              ).map(([label, v, unit]) => (
-                <div key={label} className="flex-1">
-                  <div className="text-[12px] text-ink-2">{label}</div>
-                  <div className="tnum mt-1 text-[20px] font-medium text-ink">
-                    {v != null ? (
-                      <>
-                        {unit === '千卡' ? fmtKcal(v) : fmtMacro(v)}
-                        <span className="text-[12px] font-normal text-ink-2"> {unit}</span>
-                      </>
-                    ) : (
-                      <span className="text-ink-3">—</span>
+            <AnimatedGroup skip={dateDir !== 0}>
+              {/* 当日汇总：热量（含目标进度）+ 三大营养素（各自带目标进度） */}
+              <section className="nutrition-card mb-4">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-[13px] font-medium text-brand">{isToday(dateKey) ? '今日摄入' : '当日摄入'}</span>
+                  <button
+                    type="button"
+                    onClick={() => setTargetsOpen(true)}
+                    className="-my-2 -mr-2 h-9 rounded-full px-2.5 text-[12px] font-medium text-brand active:bg-brand/10"
+                  >
+                    {hasAnyTarget ? '调整目标' : '设置目标'}
+                  </button>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <AnimatedNumber value={totals.kcal} className="tnum calorie-number" />
+                  <span className="tnum text-[14px] text-ink-2">
+                    {kcalGoal != null ? `/ ${fmtKcal(kcalGoal)} 千卡` : '千卡'}
+                  </span>
+                </div>
+                {kcalGoal != null && (
+                  <ProgressBar pct={kcalPct!} barClass="bg-brand" label="热量目标完成度" className="mt-3 h-2" />
+                )}
+                {(kcalGoal != null || metric?.burn_kcal != null) && (
+                  <div className="tnum mt-2 flex items-center justify-between gap-3 text-[12px] text-ink-2">
+                    <span>
+                      {kcalGoal == null
+                        ? ''
+                        : totals.kcal <= kcalGoal
+                          ? <>还可摄入 <AnimatedNumber value={kcalGoal - totals.kcal} /> 千卡</>
+                          : <>已超出 <AnimatedNumber value={totals.kcal - kcalGoal} /> 千卡</>}
+                    </span>
+                    {metric?.burn_kcal != null && (
+                      <span>
+                        消耗 {fmtKcal(metric.burn_kcal)} · 净 {fmtKcal(totals.kcal - metric.burn_kcal)}
+                      </span>
                     )}
                   </div>
-                </div>
-              ))}
-            </div>
-          </button>
+                )}
 
-          <div className="section-heading">
-            <h2>饮食记录</h2>
-            <span className="tnum text-[11px] font-normal tracking-normal text-ink-2">{entries.length} 条记录</span>
-          </div>
-          {/* 记录列表 */}
-          {loading ? (
-            <div className="ios-card">
-              {[0, 1, 2].map((i) => (
-                <div key={i}>
-                  {i > 0 && <div className="ios-separator" />}
-                  <div className="ios-row animate-pulse gap-3">
-                    <div className="flex-1">
-                      <div className="mb-2 h-4 w-24 rounded bg-fill" />
-                      <div className="h-3 w-16 rounded bg-fill" />
-                    </div>
-                    <div className="h-4 w-14 rounded bg-fill" />
-                  </div>
+                <div className="macro-grid mt-4">
+                  {macros.map(({ label, value, factor, goal, completion, barClass }) => {
+                    const kg = perKg(value)
+                    return (
+                      <div key={label}>
+                        <div className="flex items-center gap-1.5 text-[12px] text-ink-2">
+                          <span className={`h-2 w-2 rounded-full ${barClass}`} aria-hidden="true" />
+                          {label}
+                        </div>
+                        <div className="tnum mt-1 whitespace-nowrap text-[20px] font-medium leading-7 text-ink">
+                          <AnimatedNumber value={value} preset="gram" />
+                          <span className="text-[12px] font-normal text-ink-2">
+                            {goal != null ? ` / ${fmtGram(goal)} g` : ' g'}
+                          </span>
+                        </div>
+                        {goal != null ? (
+                          <ProgressBar pct={completion!} barClass={barClass} label={`${label}目标完成度`} className="mt-1.5 h-1.5" />
+                        ) : (
+                          <div className="mt-1.5 h-1.5 rounded-full bg-brand/5" aria-hidden="true" />
+                        )}
+                        <div className="tnum mt-1.5 text-[11px] text-ink-2">
+                          {kg != null
+                            ? `${kg.toFixed(1)}${factor != null ? ` / ${fmtMacro(factor)}` : ''} g/kg`
+                            : goal != null
+                              ? `${completion}%`
+                              : '—'}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              ))}
-            </div>
-          ) : error ? (
-            <div className="ios-card px-4 py-10 text-center">
-              <p className="mb-4 text-[15px] text-ink-2">加载失败：{error}</p>
+                <div className="tnum mt-3 text-[11px] text-ink-2">
+                  {hasWeight
+                    ? hasAnyTarget
+                      ? `目标按最近体重 ${fmtMacro(latestWeight!)} kg × g/kg 系数换算`
+                      : '设置 g/kg 目标后，按体重自动换算每日克数'
+                    : '记录体重后，可按 g/kg 生成每日目标'}
+                </div>
+              </section>
+
+              {/* 今日指标：体重 + 腰围 + 总消耗，点按录入 */}
               <button
                 type="button"
-                onClick={() => void refresh()}
-                className="rounded-full bg-brand px-5 py-2 text-[15px] font-medium text-white active:bg-brand-press"
+                onClick={() => setMetricsOpen(true)}
+                className="ios-card pressable block w-full px-4 py-3 text-left active:bg-grouped"
               >
-                重试
-              </button>
-            </div>
-          ) : entries.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-symbol"><Utensils size={25} strokeWidth={1.3} /></div>
-              <div className="mb-1 text-[17px] font-semibold text-ink">
-                {isToday(dateKey) ? '今天还没有记录' : '这一天没有记录'}
-              </div>
-              <div className="text-[14px] text-ink-2">点右下角「记一笔」添加第一笔</div>
-              {prevDayCount > 0 && (
-                <motion.button
-                  type="button"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileTap={{ scale: 0.97 }}
-                  disabled={copying}
-                  onClick={() => void handleCopyPrevDay()}
-                  className="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-brand px-6 text-[16px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
-                >
-                  {copying ? '复制中…' : `复制昨天的记录（${prevDayCount} 条）`}
-                </motion.button>
-              )}
-            </div>
-          ) : (
-            <div className="ios-card">
-              <AnimatePresence initial={false}>
-                {entries.map((e, i) => (
-                  <div key={e.id}>
-                    {i > 0 && <div className="ios-separator" />}
-                    <EntryRow
-                      entry={e}
-                      onDelete={(en) => void handleDelete(en)}
-                      onTap={(en) => setEditEntry(en)}
-                    />
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10">
+                    <Scale size={18} className="text-success" />
                   </div>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
+                  <div className="min-w-0 flex-1 text-[14px] font-medium text-ink">今日指标</div>
+                  <ChevronRight size={16} className="shrink-0 text-ink-3" />
+                </div>
+                <div className="mt-3 flex">
+                  {(
+                    [
+                      ['体重', metric?.weight_kg, 'kg'],
+                      ['腰围', metric?.waist_cm, 'cm'],
+                      ['消耗', metric?.burn_kcal, '千卡'],
+                    ] as const
+                  ).map(([label, v, unit]) => (
+                    <div key={label} className="flex-1">
+                      <div className="text-[12px] text-ink-2">{label}</div>
+                      <div className="tnum mt-1 text-[20px] font-medium text-ink">
+                        {v != null ? (
+                          <>
+                            <AnimatedNumber value={v} preset={unit === '千卡' ? 'kcal' : 'fixed1'} />
+                            <span className="text-[12px] font-normal text-ink-2"> {unit}</span>
+                          </>
+                        ) : (
+                          <span className="text-ink-3">—</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </button>
+
+              <div className="section-heading">
+                <h2>饮食记录</h2>
+                <span className="tnum text-[11px] font-normal tracking-normal text-ink-2">{entries.length} 条记录</span>
+              </div>
+              {/* 记录列表 */}
+              {loading ? (
+                <div className="ios-card">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i}>
+                      {i > 0 && <div className="ios-separator" />}
+                      <div className="ios-row animate-pulse gap-3">
+                        <div className="flex-1">
+                          <div className="mb-2 h-4 w-24 rounded bg-fill" />
+                          <div className="h-3 w-16 rounded bg-fill" />
+                        </div>
+                        <div className="h-4 w-14 rounded bg-fill" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : error ? (
+                <div className="ios-card px-4 py-10 text-center">
+                  <p className="mb-4 text-[15px] text-ink-2">加载失败：{error}</p>
+                  <button
+                    type="button"
+                    onClick={() => void refresh()}
+                    className="rounded-full bg-brand px-5 py-2 text-[15px] font-medium text-white active:bg-brand-press"
+                  >
+                    重试
+                  </button>
+                </div>
+              ) : entries.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-symbol"><Utensils size={25} strokeWidth={1.3} /></div>
+                  <div className="mb-1 text-[17px] font-semibold text-ink">
+                    {isToday(dateKey) ? '今天还没有记录' : '这一天没有记录'}
+                  </div>
+                  <div className="text-[14px] text-ink-2">点右下角「记一笔」添加第一笔</div>
+                  {prevDayCount > 0 && (
+                    <motion.button
+                      type="button"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileTap={{ scale: 0.97 }}
+                      disabled={copying}
+                      onClick={() => void handleCopyPrevDay()}
+                      className="pressable mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-brand px-6 text-[16px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
+                    >
+                      {copying ? '复制中…' : `复制昨天的记录（${prevDayCount} 条）`}
+                    </motion.button>
+                  )}
+                </div>
+              ) : (
+                <div className="ios-card">
+                  <AnimatePresence initial={false}>
+                    {entries.map((e, i) => (
+                      <div key={e.id}>
+                        {i > 0 && <div className="ios-separator" />}
+                        <EntryRow
+                          entry={e}
+                          onDelete={(en) => void handleDelete(en)}
+                          onTap={(en) => setEditEntry(en)}
+                        />
+                      </div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </AnimatedGroup>
+          </motion.div>
         </div>
       </main>
 
@@ -409,13 +444,33 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
         type="button"
         aria-label="添加记录"
         onClick={() => setAddOpen(true)}
-        whileTap={{ scale: 0.88 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-        className="absolute right-5 z-30 flex h-14 items-center justify-center gap-2 rounded-full bg-brand px-5 text-white shadow-lg shadow-brand/20"
-        style={{ bottom: 'calc(68px + env(safe-area-inset-bottom) + 16px)' }}
+        layout
+        whileTap={{ scale: 0.9 }}
+        transition={{ type: 'spring', stiffness: 520, damping: 34 }}
+        className="fab absolute right-5 z-30 flex h-14 items-center justify-center overflow-hidden rounded-full bg-brand text-white"
+        style={{
+          bottom: 'calc(env(safe-area-inset-bottom) + 86px)',
+          paddingInline: fabCompact ? 0 : 20,
+          width: fabCompact ? 56 : undefined,
+        }}
       >
-        <Plus size={21} strokeWidth={1.8} />
-        <span className="text-[14px] font-medium">记一笔</span>
+        <motion.span layout="position" className="flex shrink-0 items-center">
+          <Plus size={21} strokeWidth={1.8} />
+        </motion.span>
+        <AnimatePresence initial={false}>
+          {!fabCompact && (
+            <motion.span
+              key="label"
+              initial={{ opacity: 0, width: 0, marginLeft: 0 }}
+              animate={{ opacity: 1, width: 'auto', marginLeft: 8 }}
+              exit={{ opacity: 0, width: 0, marginLeft: 0 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+              className="whitespace-nowrap text-[14px] font-medium"
+            >
+              记一笔
+            </motion.span>
+          )}
+        </AnimatePresence>
       </motion.button>
 
       <AddEntrySheet
@@ -473,9 +528,11 @@ function ProgressBar({
       aria-valuemax={100}
       aria-valuenow={width}
     >
-      <div
-        className={`h-full rounded-full ${barClass} transition-[width] duration-300`}
-        style={{ width: `${width}%` }}
+      <motion.div
+        className={`h-full rounded-full ${barClass}`}
+        initial={{ width: 0 }}
+        animate={{ width: `${width}%` }}
+        transition={{ type: 'spring', stiffness: 120, damping: 22, mass: 0.8 }}
       />
     </div>
   )

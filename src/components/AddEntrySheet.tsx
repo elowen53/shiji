@@ -318,7 +318,7 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
                 type="button"
                 disabled={!customValid || saving}
                 onClick={handleSaveCustom}
-                className="flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-40"
+                className="pressable flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-40"
               >
                 {saving ? '保存中…' : `保存 · ${fmtKcal(customKcal)} 千卡`}
               </button>
@@ -372,7 +372,7 @@ export default function AddEntrySheet({ open, foods, onClose, onSave }: AddEntry
                     type="button"
                     disabled={saving}
                     onClick={handleSave}
-                    className="flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
+                    className="pressable flex h-[52px] w-full items-center justify-center rounded-2xl bg-brand text-[17px] font-semibold text-white active:bg-brand-press disabled:opacity-60"
                   >
                     {saving ? '保存中…' : '保存'}
                   </button>
