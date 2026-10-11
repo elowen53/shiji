@@ -2,13 +2,17 @@ import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Share, ChartNoAxesCombined, Ruler, Scale } from 'lucide-react'
 import BrandMasthead from '@/components/BrandMasthead'
+import EnergyBalanceCard from '@/components/EnergyBalanceCard'
 import ExportSheet from '@/components/ExportSheet'
 import LatestStatCard from '@/components/LatestStatCard'
 import TrendChartCard from '@/components/TrendChartCard'
 import WeightSummaryCard from '@/components/WeightSummaryCard'
+import WeightVsEnergyCard from '@/components/WeightVsEnergyCard'
+import { useEnergyBalance } from '@/hooks/useEnergyBalance'
 import { useMetricTrend } from '@/hooks/useMetricTrend'
 import { addDays, formatDisplay, todayKey } from '@/lib/date'
 import { getWeeklyTrendSummary, withMovingAverage, type TrendPoint } from '@/lib/trend'
+import { buildExpectedVsActual, summarizeBalances, toBalanceChart } from '@/lib/energy'
 
 type RangeKey = '30d' | '90d' | 'all'
 
@@ -41,6 +45,7 @@ function filterByRange(points: TrendPoint[], days: number | null) {
 export default function TrendsPage() {
   const weight = useMetricTrend('weight_kg')
   const waist = useMetricTrend('waist_cm')
+  const energy = useEnergyBalance()
   const [range, setRange] = useState<RangeKey>('30d')
   const [exportOpen, setExportOpen] = useState(false)
 
@@ -53,13 +58,28 @@ export default function TrendsPage() {
   const waistStat = latestDelta(waist.points)
   const weightWeekly = useMemo(() => getWeeklyTrendSummary(weight.points), [weight.points])
 
-  const loading = weight.loading || waist.loading
-  const error = weight.error ?? waist.error
-  const bothEmpty = weight.points.length === 0 && waist.points.length === 0
+  /** 热量收支：按区间过滤完整日；体重对照用全量 7 日均重，起点取区间内第一个均重 */
+  const cutoff = days == null ? null : addDays(todayKey(), -(days - 1))
+  const balancesInRange = useMemo(
+    () => energy.balances.filter((b) => cutoff == null || b.date >= cutoff),
+    [energy.balances, cutoff],
+  )
+  const balanceChart = useMemo(() => toBalanceChart(balancesInRange), [balancesInRange])
+  const balanceSummary = useMemo(() => summarizeBalances(balancesInRange), [balancesInRange])
+  const weightVsEnergy = useMemo(
+    () => buildExpectedVsActual(energy.balances, withMovingAverage(weight.points), cutoff),
+    [energy.balances, weight.points, cutoff],
+  )
+
+  const loading = weight.loading || waist.loading || energy.loading
+  const error = weight.error ?? waist.error ?? energy.error
+  const bothEmpty =
+    weight.points.length === 0 && waist.points.length === 0 && energy.balances.length === 0
 
   const retry = () => {
     void weight.refresh()
     void waist.refresh()
+    void energy.refresh()
   }
 
   return (
@@ -107,7 +127,7 @@ export default function TrendsPage() {
             <div className="empty-symbol"><ChartNoAxesCombined size={27} strokeWidth={1.3} /></div>
             <div className="mb-1 text-[17px] font-semibold text-ink">还没有指标记录</div>
             <div className="text-[14px] text-ink-2">
-              去「记录」页点今日指标，添加体重或腰围
+              去「记录」页点今日指标，添加体重、腰围或总消耗
             </div>
           </div>
         ) : (
@@ -177,6 +197,22 @@ export default function TrendsPage() {
                 text="还没有体重记录"
                 hint="去「记录」页点今日指标，添加体重"
               />
+            )}
+
+            {/* 热量收支 */}
+            {energy.balances.length > 0 && (
+              <>
+                <div className="mb-4">
+                  <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">热量收支</div>
+                  <EnergyBalanceCard data={balanceChart} summary={balanceSummary} />
+                </div>
+                {weight.points.length > 0 && (
+                  <div className="mb-4">
+                    <div className="mb-1.5 px-1 text-[13px] font-medium text-ink-2">体重 × 热量收支</div>
+                    <WeightVsEnergyCard result={weightVsEnergy} />
+                  </div>
+                )}
+              </>
             )}
 
             {/* 腰围趋势 */}

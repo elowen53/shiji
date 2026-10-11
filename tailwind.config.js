@@ -11,6 +11,8 @@ module.exports = {
         danger: "rgb(var(--color-danger) / <alpha-value>)",
         success: "rgb(var(--color-success) / <alpha-value>)",
         warn: "rgb(var(--color-warn) / <alpha-value>)",
+        deficit: "rgb(var(--color-deficit) / <alpha-value>)",
+        surplus: "rgb(var(--color-surplus) / <alpha-value>)",
         ink: "rgb(var(--color-ink) / <alpha-value>)",
         "ink-2": "rgb(var(--color-ink-2) / <alpha-value>)",
         "ink-3": "rgb(var(--color-ink-3) / <alpha-value>)",

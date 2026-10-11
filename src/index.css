@@ -38,6 +38,9 @@
     --color-fill-press: 219 222 207;
     --color-grouped: 247 247 239;
     --color-card: 255 255 250;
+    /* 热量收支：缺口 / 盈余（蓝 ↔ 琥珀，色觉障碍下仍可区分） */
+    --color-deficit: 26 111 160;
+    --color-surplus: 194 122 44;
     --color-separator: rgba(70, 88, 61, 0.12);
   }
 }
