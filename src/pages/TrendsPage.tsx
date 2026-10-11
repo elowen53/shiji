@@ -58,13 +58,17 @@ export default function TrendsPage() {
   const waistStat = latestDelta(waist.points)
   const weightWeekly = useMemo(() => getWeeklyTrendSummary(weight.points), [weight.points])
 
-  /** 热量收支：按区间过滤完整日；体重对照用全量 7 日均重，起点取区间内第一个均重 */
+  /** 热量均线先用完整历史计算再过滤显示；区间汇总仍只统计所选日期内的完整日。 */
   const cutoff = days == null ? null : addDays(todayKey(), -(days - 1))
   const balancesInRange = useMemo(
     () => energy.balances.filter((b) => cutoff == null || b.date >= cutoff),
     [energy.balances, cutoff],
   )
-  const balanceChart = useMemo(() => toBalanceChart(balancesInRange), [balancesInRange])
+  const fullBalanceChart = useMemo(() => toBalanceChart(energy.balances), [energy.balances])
+  const balanceChart = useMemo(
+    () => fullBalanceChart.filter((point) => cutoff == null || point.date >= cutoff),
+    [fullBalanceChart, cutoff],
+  )
   const balanceSummary = useMemo(() => summarizeBalances(balancesInRange), [balancesInRange])
   const weightVsEnergy = useMemo(
     () => buildExpectedVsActual(energy.balances, withMovingAverage(weight.points), cutoff),
