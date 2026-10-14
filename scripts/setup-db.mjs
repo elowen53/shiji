@@ -16,7 +16,8 @@ if (!token) {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sql = readFileSync(join(here, '..', 'setup.sql'), 'utf8') + '\n' +
-  readFileSync(join(here, '..', 'supabase/migrations/20261011_private_access.sql'), 'utf8');
+  readFileSync(join(here, '..', 'supabase/migrations/20261011_private_access.sql'), 'utf8') + '\n' +
+  readFileSync(join(here, '..', 'supabase/migrations/20261014_analysis_reader.sql'), 'utf8');
 
 console.log(`→ 正在项目 ${PROJECT_REF} 上执行建表 SQL ...`);
 
