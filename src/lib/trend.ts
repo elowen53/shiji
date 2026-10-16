@@ -1,4 +1,4 @@
-import { addDays } from '@/lib/date'
+import { addDays } from './date.js'
 
 /** 趋势图数据工具：体重 / 腰围等指标共用 */
 
