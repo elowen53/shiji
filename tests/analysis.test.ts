@@ -267,6 +267,10 @@ test('server configuration rejects owner credentials, insecure origins and missi
 
 test('MCP client initializes, discovers five read-only tools and calls all of them over the actual Node adapter', async () => {
   const server = createServer((request: IncomingMessage & { body?: unknown }, response) => {
+    // Match Vercel's dynamic route capture in both req.query and the URL.
+    const path = new URL(request.url!, 'http://localhost').pathname
+    const route = path.match(/^\/api\/analysis\/v1\/(overview|daily|entries|summary|targets)$/)?.[1]
+    if (route) Object.assign(request, { query: { resource: route } })
     // Exercise the pre-parsed req.body path used by Vercel as well as raw Node streams.
     if (request.headers['x-preparsed'] === 'true' && request.method === 'POST') {
       void (async () => {
@@ -284,6 +288,15 @@ test('MCP client initializes, discovers five read-only tools and calls all of th
   const networkApp = createAnalysisHandler({ service, origin, clients, clock, audit: (event) => logs.push(event) })
   const adapter = createNodeAdapter(networkApp)
   try {
+    const headers = { Authorization: `Bearer ${token}` }
+    for (const resource of ['overview', 'daily', 'entries', 'summary', 'targets']) {
+      const range = ['daily', 'entries', 'summary'].includes(resource) ? '&from=2026-10-01&to=2026-10-03' : ''
+      const response = await fetch(`${origin}/api/analysis/v1/${resource}?resource=${resource}${range}`, { headers })
+      assert.equal(response.status, 200, resource)
+    }
+    for (const query of ['resource=summary', 'resource=overview&resource=overview', 'resource=overview&sql=select']) {
+      assert.equal((await fetch(`${origin}/api/analysis/v1/overview?${query}`, { headers })).status, 400)
+    }
     for (const preparsed of [false, true]) {
       const client = new Client({ name: 'integration-test', version: '1.0.0' })
       const transport = new StreamableHTTPClientTransport(new URL(`${origin}/api/mcp`), {
