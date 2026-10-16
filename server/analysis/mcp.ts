@@ -1,7 +1,7 @@
 import { createMcpHandler, McpServer } from '@modelcontextprotocol/server'
 import { emptySchema, entriesSchema, rangeSchema, summarySchema, targetsSchema } from './schema.js'
 import { publicError } from './errors.js'
-import { DATA_NOTES } from './service.js'
+import { DATA_NOTES, VEGETABLE_LOGGING_NOTE } from './service.js'
 import type { AnalysisService } from './service.js'
 
 export type AuditEvent = {
@@ -48,7 +48,7 @@ export function createAnalysisMcp(service: AnalysisService, audit: AuditLogger) 
       inputSchema: rangeSchema, annotations,
     }, (query) => run('get_daily_history', () => service.daily(query)))
     server.registerTool('list_food_entries', {
-      description: 'Read saved food-entry snapshots with literal food_name substring filtering. Follow next_cursor until null; keep the same dates/filter. Nutrition already includes quantity. Maximum 200 entries per page and 366 days per query.',
+      description: `Read saved food-entry snapshots with literal food_name substring filtering. Follow next_cursor until null; keep the same dates/filter. Nutrition already includes quantity. Maximum 200 entries per page and 366 days per query. ${VEGETABLE_LOGGING_NOTE}`,
       inputSchema: entriesSchema, annotations,
     }, (query) => run('list_food_entries', () => service.entries(query)))
     server.registerTool('get_period_summary', {
