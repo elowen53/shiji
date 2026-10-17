@@ -25,4 +25,7 @@ dist-ssr
 .env.local
 
 .vercel
+supabase/.temp/
 .env*
+!.env.example
+!.env.analysis.example

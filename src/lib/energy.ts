@@ -1,5 +1,5 @@
-import { addDays } from '@/lib/date'
-import type { TrendChartPoint } from '@/lib/trend'
+import { addDays } from './date.js'
+import type { TrendChartPoint } from './trend.js'
 
 /** 热量收支工具：每日缺口 / 盈余，以及与体重变化的对照 */
 

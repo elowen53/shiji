@@ -6,9 +6,14 @@
     },
     {
       "path": "./tsconfig.node.json"
+    },
+    {
+      "path": "./tsconfig.server.json"
     }
   ],
   "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]

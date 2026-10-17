@@ -17,6 +17,12 @@
 - **交互**：iOS 风格左滑删除、底部弹簧 Sheet、毛玻璃底栏、灵动岛 / Home 指示条安全区适配
 - **密码访问**：使用 Supabase Auth 验证访问密码；登录在当前设备持久保存并自动续期，顶部「锁定」会退出当前设备。
 
+## AI 历史数据分析
+
+已提供供 Claude Code / Codex 使用的只读 MCP 服务，以及共用查询逻辑的 HTTP API，支持数据概况、每日历史、饮食明细分页、周/月汇总和当前营养目标。使用独立分析 Token 与 PostgreSQL 只读角色，保留现有网页认证。
+
+配置、数据库迁移、本地启动与客户端示例见 [AI 分析接口文档](docs/analysis-api.md)。本地开发使用 Node.js 22；`npm run test:analysis` 运行离线集成测试，`npm run analysis:dev` 启动分析服务。
+
 ## 技术栈
 
 - **前端**：React 19 + TypeScript + Vite + Tailwind CSS + shadcn/ui + framer-motion
@@ -44,7 +50,7 @@ VITE_SUPABASE_ANON_KEY=你的 publishable key
 
 两种方式任选其一：
 
-1. **SQL Editor**：依次执行根目录的 `setup.sql` 和 `supabase/migrations/20261011_private_access.sql`（幂等，可重复执行）
+1. **SQL Editor**：依次执行根目录的 `setup.sql`、`supabase/migrations/20261011_private_access.sql` 和 `supabase/migrations/20261014_analysis_reader.sql`（幂等，可重复执行；分析角色默认未启用登录）
 2. **脚本**：在 <https://supabase.com/dashboard/account/tokens> 生成 Personal Access Token 后运行：
 
 ```bash
@@ -61,6 +67,8 @@ SUPABASE_ACCESS_TOKEN=sbp_xxx VITE_SUPABASE_ANON_KEY=你的key node scripts/setu
 | `macro_targets` | 营养目标：单行表（id = 1），蛋白质 / 脂肪 / 碳水的 g/kg 系数，空值为未设置 |
 
 四张表均启用 RLS，撤销匿名访问，只允许 `owner@shiji.local` 的有效登录会话执行增删改查。公开的 publishable / anon key 不能访问数据；即使另一个账号登录也没有数据权限。锁定时会撤销当前会话，旧访问令牌也无法继续读写这些表。
+
+独立的 `shiji_analysis_reader` 数据库角色仅允许读取这四张表，供分析服务使用；不属于浏览器的 `authenticated` 登录体系，需另行配置凭证后启用。
 
 ## 访问账号与 iPhone 登录
 

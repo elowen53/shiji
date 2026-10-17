@@ -39,6 +39,10 @@ begin
     execute format('create policy owner_insert on public.%I for insert to authenticated with check ((select public.shiji_has_access()))', table_name);
     execute format('create policy owner_update on public.%I for update to authenticated using ((select public.shiji_has_access())) with check ((select public.shiji_has_access()))', table_name);
     execute format('create policy owner_delete on public.%I for delete to authenticated using ((select public.shiji_has_access()))', table_name);
+    -- Re-running owner setup must retain the separately provisioned AI reader.
+    if exists (select 1 from pg_roles where rolname = 'shiji_analysis_reader') then
+      execute format('create policy analysis_reader_select on public.%I for select to shiji_analysis_reader using (true)', table_name);
+    end if;
   end loop;
 end;
 $$;
