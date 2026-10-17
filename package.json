@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test:access": "node scripts/check-access.mjs",
+    "test:auth": "tsx --test tests/session-access.test.ts",
     "test:analysis": "tsx --test tests/analysis.test.ts",
     "analysis:dev": "tsx scripts/analysis-dev.ts",
     "analysis:token": "tsx scripts/analysis-token.ts",

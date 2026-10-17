@@ -5,6 +5,7 @@ import AnimatedGroup from '@/components/motion/AnimatedGroup'
 import { OWNER_EMAIL } from '@/lib/auth'
 import { AccessContext } from '@/lib/access'
 import { supabase } from '@/lib/supabase'
+import { verifySessionAccess, type AccessStatus } from '@/lib/session-access'
 
 export default function AuthGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
@@ -38,20 +39,19 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 }
 
 function SessionGate({ session, children }: { session: Session; children: ReactNode }) {
-  const [status, setStatus] = useState<'checking' | 'allowed' | 'denied' | 'error'>('checking')
+  const [result, setResult] = useState<{ token: string; status: AccessStatus } | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const status = result?.token === session.access_token ? result.status : 'checking'
 
   useEffect(() => {
     let active = true
     // 先验证专用账号和仍有效的服务端会话，再挂载任何数据 hooks。
-    Promise.resolve(supabase!.rpc('shiji_has_access')).then(({ data, error }) => {
+    verifySessionAccess(supabase!, session).then(status => {
       if (!active) return
-      setStatus(error ? 'error' : data === true && session.user.email === OWNER_EMAIL ? 'allowed' : 'denied')
-    }).catch(() => {
-      if (active) setStatus('error')
+      setResult({ token: session.access_token, status })
     })
     return () => { active = false }
-  }, [session.access_token, session.user.email, attempt])
+  }, [session, attempt])
 
   if (status === 'allowed') return children
   if (status === 'denied') return <PasswordForm notice="登录已失效，请重新输入密码。" />
@@ -60,7 +60,7 @@ function SessionGate({ session, children }: { session: Session; children: ReactN
       <p role={status === 'error' ? 'alert' : 'status'}>
         {status === 'error' ? '暂时无法验证登录，请检查网络后重试。' : '正在验证登录…'}
       </p>
-      {status === 'error' && <button className="mt-5 rounded-full bg-brand px-6 py-3 text-white" onClick={() => setAttempt(n => n + 1)}>重试</button>}
+      {status === 'error' && <button className="mt-5 rounded-full bg-brand px-6 py-3 text-white" onClick={() => { setResult(null); setAttempt(n => n + 1) }}>重试</button>}
     </GateShell>
   )
 }
