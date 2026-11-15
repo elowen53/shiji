@@ -8,7 +8,7 @@ export interface EntriesApi {
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
-  /** 保存时把食物营养按数量折算后做快照冗余存储；临时食物无 id，food_id 存 null，不进入食物库 */
+  /** 同日同食物同单位累加数量与营养快照；临时食物无 id，独立保存且不进入食物库 */
   addEntry: (food: EntrySource, quantity: number, entryDate: string) => Promise<boolean>
   updateEntryQuantity: (entry: Entry, quantity: number) => Promise<boolean>
   deleteEntry: (id: string) => Promise<boolean>
@@ -100,21 +100,18 @@ export function useEntries(entryDate: string): EntriesApi {
   const addEntry = useCallback(
     async (food: EntrySource, quantity: number, date: string) => {
       if (!supabase) return false
-      const payload = {
-        entry_date: date,
-        food_id: food.id ?? null,
-        food_name: food.name,
-        unit: food.unit,
-        quantity,
-        kcal: food.kcal * quantity,
-        protein: food.protein * quantity,
-        fat: food.fat * quantity,
-        carbs: food.carbs * quantity,
-      }
       const { data, error: err } = await supabase
-        .from('entries')
-        .insert(payload)
-        .select()
+        .rpc('add_food_entry', {
+          p_entry_date: date,
+          p_food_id: food.id ?? null,
+          p_food_name: food.name,
+          p_unit: food.unit,
+          p_quantity: quantity,
+          p_kcal: food.kcal * quantity,
+          p_protein: food.protein * quantity,
+          p_fat: food.fat * quantity,
+          p_carbs: food.carbs * quantity,
+        })
         .single()
       if (err) {
         setError(err.message)
@@ -122,7 +119,15 @@ export function useEntries(entryDate: string): EntriesApi {
       }
       setError(null)
       if (date === entryDate) {
-        setEntries((prev) => [...prev, data as Entry])
+        const saved = data as Entry
+        // RPC 也会收拢该食物此前的重复行，移除旧行后以数据库返回的快照为准。
+        setEntries((prev) => [...prev.filter((entry) =>
+          entry.id !== saved.id && !(saved.food_id !== null &&
+            entry.entry_date === saved.entry_date &&
+            entry.food_id === saved.food_id && entry.unit === saved.unit),
+        ), saved].sort((a, b) =>
+          (a.created_at ?? '').localeCompare(b.created_at ?? ''),
+        ))
       }
       return true
     },
