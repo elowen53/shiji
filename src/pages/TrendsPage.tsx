@@ -18,6 +18,7 @@ import {
   WEIGHT_RATE,
   assessComposition,
   assessCutPace,
+  hasRecentCheat,
   summarizeProtein,
   summarizeRate,
 } from '@/lib/cut'
@@ -57,6 +58,7 @@ export default function TrendsPage() {
   const weightRate = useMemo(() => summarizeRate(weight.points, WEIGHT_RATE), [weight.points])
   const waistRate = useMemo(() => summarizeRate(waist.points, WAIST_RATE), [waist.points])
   const pace = assessCutPace(weightRate?.percentPerWeek ?? null)
+  const recentCheat = weightRate != null && hasRecentCheat(energy.cheatDates, weightRate.latest.date)
   const composition = assessComposition(weightRate?.percentPerWeek ?? null, waistRate?.perWeek ?? null)
 
   const proteinFactor = targets?.protein_g_per_kg ?? null
@@ -150,7 +152,7 @@ export default function TrendsPage() {
           ) : (
             <AnimatedGroup>
               {/* 减脂进度：体重节奏、腰围对照、蛋白质达标 */}
-              {weightRate && <WeightSummaryCard summary={weightRate} pace={pace} />}
+              {weightRate && <WeightSummaryCard summary={weightRate} pace={pace} recentCheat={recentCheat} />}
               {waistRate && <WaistSummaryCard summary={waistRate} signal={composition} />}
               <ProteinAdherenceCard week={proteinWeek} month={proteinMonth} />
 

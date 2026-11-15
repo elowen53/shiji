@@ -365,3 +365,52 @@ test('database errors are redacted and audit logs contain neither tokens nor foo
   assert.doesNotMatch(logText, /snapshot food|private-password|secret-host/)
   assert.ok(logs.some((log) => log.event === 'analysis_tool' && log.client_id === 'codex'))
 })
+
+test('cheat days use the estimated surplus, not the partial log, and stay out of intake means', async (t) => {
+  // Added here, not in the shared fixture, so the other tests keep their counts.
+  await db.exec(`
+    reset role;
+    insert into public.entries(id,entry_date,food_name,unit,quantity,kcal,protein,fat,carbs) values
+      ('40000000-0000-4000-8000-000000000001','2026-10-05','snack before the feast','portion',1,400,5,10,60);
+    insert into public.daily_metrics(entry_date,burn_kcal,cheat_surplus_kcal) values ('2026-10-05',2300,1000);
+    set role shiji_analysis_reader;
+  `)
+  t.after(() => db.exec(`
+    reset role;
+    delete from public.entries where id = '40000000-0000-4000-8000-000000000001';
+    delete from public.daily_metrics where entry_date = '2026-10-05';
+    set role shiji_analysis_reader;
+  `))
+  const result = await service.daily({ from: '2026-10-01', to: '2026-10-14' })
+  const cheat = result.data[4]
+  assert.equal(cheat.entry_date, '2026-10-05')
+  assert.equal(cheat.is_cheat_day, true)
+  assert.equal(cheat.cheat_surplus_kcal, 1000)
+  assert.equal(cheat.kcal, 400)
+  assert.equal(cheat.balance_kcal, 1000) // Not 400 - 2300.
+  assert.equal(cheat.balance_is_estimated, true)
+  assert.equal(cheat.food_log_completeness, 'cheat_day_incomplete')
+  assert.equal(result.data[1].is_cheat_day, false)
+  assert.equal(result.data[1].balance_is_estimated, false)
+  assert.equal(result.coverage.cheat_days, 1)
+  assert.equal(result.coverage.ended_days_with_intake_and_burn, 2)
+  const summary = (await service.summary(summarySchema.parse({ from: '2026-10-01', to: '2026-10-14' }))).data[0]
+  assert.equal(summary.intake.sample_days, 3)
+  assert.equal(summary.balance.estimated_cheat_days, 1)
+})
+
+test('daily query still runs on a database without the cheat-day column', async () => {
+  const old = new PGlite()
+  try {
+    await old.exec(`
+      create table public.entries(entry_date date, kcal numeric, protein numeric, fat numeric, carbs numeric);
+      create table public.daily_metrics(entry_date date primary key, weight_kg numeric, waist_cm numeric, burn_kcal numeric);
+      insert into public.daily_metrics values ('2026-10-01', 80, null, 2400);
+    `)
+    const rows = (await old.query<DailyRow>(DAILY_SQL, ['2026-10-01', '2026-10-01'])).rows
+    assert.equal(rows[0].burn_kcal, 2400)
+    assert.equal(rows[0].cheat_surplus_kcal, null)
+  } finally {
+    await old.close()
+  }
+})

@@ -13,6 +13,7 @@
 - **每日指标**：记录每日体重（kg）、腰围（cm）与总消耗（千卡），自动显示净摄入（总摄入 − 总消耗）
 - **热量收支**：趋势页按日展示热量缺口 / 盈余（摄入 − 总消耗，只统计饮食与消耗都记录了的已结束日子）与 7 日均值；并将按热量推算的预期体重变化（÷ 7700 千卡/kg）与 7 日均重的实际变化对照，估算记录偏差
 - **减脂进度**：趋势页以 7 日均重为主，按近 14 天称重的回归斜率估算每周变化率，并对照每周 −0.5% ~ −1% 的合适区间提示偏慢 / 合适 / 偏快；腰围按近 28 天估算每周变化，与体重对照判断减掉的是否主要是脂肪；统计近 7 天 / 30 天蛋白质达标天数（达到目标的 90% 记为达标）
+- **放纵日**：聚餐、社交没法记录热量时，在「今日指标」里一键标记并选择估算盈余（+500 / +1,000 / +1,500 千卡，默认 +1,000）。这天按估算盈余计入热量收支（斜纹柱区分于记录值），已记的食物不参与收支与蛋白质达标统计；趋势页提示放纵日抵掉了多少天的缺口，放纵日后 3 天内的体重会提示可能含水分
 - **营养目标**：蛋白质 / 脂肪 / 碳水目标各自按「克 / 公斤体重」手动设置，每日目标 = 系数 × 最近一次体重，并显示完成进度
 - **历史不受删改影响**：每条记录保存时冗余营养快照，之后修改或删除食物库中的食物不影响已保存的记录
 - **交互**：iOS 风格左滑删除、底部弹簧 Sheet、毛玻璃底栏、灵动岛 / Home 指示条安全区适配
@@ -51,7 +52,7 @@ VITE_SUPABASE_ANON_KEY=你的 publishable key
 
 两种方式任选其一：
 
-1. **SQL Editor**：依次执行根目录的 `setup.sql`、`supabase/migrations/20261011_private_access.sql`、`supabase/migrations/20261014_analysis_reader.sql` 和 `supabase/migrations/20261107130531_merge_food_entries.sql`（幂等，可重复执行；分析角色默认未启用登录）
+1. **SQL Editor**：依次执行根目录的 `setup.sql`、`supabase/migrations/20261011_private_access.sql`、`supabase/migrations/20261014_analysis_reader.sql`、`supabase/migrations/20261107130531_merge_food_entries.sql` 和 `supabase/migrations/20261115140000_cheat_day.sql`（幂等，可重复执行；分析角色默认未启用登录）
 2. **脚本**：在 <https://supabase.com/dashboard/account/tokens> 生成 Personal Access Token 后运行：
 
 ```bash
@@ -64,7 +65,7 @@ SUPABASE_ACCESS_TOKEN=sbp_xxx VITE_SUPABASE_ANON_KEY=你的key node scripts/setu
 |---|---|
 | `foods` | 食物库：名称、单位、每单位热量 / 蛋白质 / 脂肪 / 碳水 |
 | `entries` | 每日记录：日期 + 数量 + 按数量折算后的营养快照（删食物不影响历史） |
-| `daily_metrics` | 每日指标：一天一行（日期主键），体重、腰围与总消耗 |
+| `daily_metrics` | 每日指标：一天一行（日期主键），体重、腰围、总消耗与放纵日估算盈余 |
 | `macro_targets` | 营养目标：单行表（id = 1），蛋白质 / 脂肪 / 碳水的 g/kg 系数，空值为未设置 |
 
 四张表均启用 RLS，撤销匿名访问，只允许 `owner@shiji.local` 的有效登录会话执行增删改查。公开的 publishable / anon key 不能访问数据；即使另一个账号登录也没有数据权限。锁定时会撤销当前会话，旧访问令牌也无法继续读写这些表。

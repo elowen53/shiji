@@ -44,7 +44,7 @@ export function createAnalysisMcp(service: AnalysisService, audit: AuditLogger) 
       inputSchema: emptySchema, annotations,
     }, () => run('get_data_overview', () => service.overview()))
     server.registerTool('get_daily_history', {
-      description: 'Daily saved nutrition totals, weight, waist and burn for an inclusive YYYY-MM-DD range (maximum 366 days, no future dates). Missing days stay null. Includes 7-day weight means (at least 3 measurements).',
+      description: 'Daily saved nutrition totals, weight, waist and burn for an inclusive YYYY-MM-DD range (maximum 366 days, no future dates). Missing days stay null. Includes 7-day weight means (at least 3 measurements). Cheat days (is_cheat_day) carry an estimated surplus instead of logged intake.',
       inputSchema: rangeSchema, annotations,
     }, (query) => run('get_daily_history', () => service.daily(query)))
     server.registerTool('list_food_entries', {

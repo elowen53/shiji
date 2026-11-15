@@ -62,7 +62,12 @@ function BalanceTooltip({
   return (
     <div className="tnum rounded-lg bg-ink/90 px-3 py-2 text-[12px] font-medium leading-5 text-white shadow-lg">
       <div>{formatDisplay(p.date)}</div>
-      {p.balance != null ? (
+      {p.estimated ? (
+        <>
+          <div>放纵日 · 估算{balanceLabel(p.balance!)}</div>
+          <div className="text-white/70">没有记录热量，按估算计入</div>
+        </>
+      ) : p.balance != null ? (
         <>
           <div>{balanceLabel(p.balance)}</div>
           <div className="text-white/70">
@@ -87,7 +92,7 @@ export default function EnergyBalanceCard({ data, summary }: EnergyBalanceCardPr
   if (!summary) {
     return (
       <section className="ios-card px-4 py-10 text-center">
-        <div className="mb-1 text-[15px] font-semibold text-ink">该区间暂无完整的收支数据</div>
+        <div className="mb-1 text-[15px] font-semibold text-ink">该区间暂无收支数据</div>
         <div className="text-[13px] text-ink-2">同一天既记录饮食、又在今日指标里填写总消耗，才能计算缺口</div>
       </section>
     )
@@ -109,8 +114,15 @@ export default function EnergyBalanceCard({ data, summary }: EnergyBalanceCardPr
         </div>
         <div className="tnum mt-1.5 text-[12px] text-ink-2">
           累计 {signedKcal(summary.total)} 千卡 ≈ {summary.total < 0 ? '−' : '+'}
-          {fmtMacro(Math.abs(summary.total) / KCAL_PER_KG)} kg · 完整记录 {summary.days}/{summary.span} 天
+          {fmtMacro(Math.abs(summary.total) / KCAL_PER_KG)} kg · 计入 {summary.days}/{summary.span} 天
         </div>
+        {summary.estimatedDays > 0 && (
+          <div className="tnum mt-2 rounded-xl bg-surplus/10 px-3 py-2 text-[12px] leading-5 text-ink">
+            含 {summary.estimatedDays} 个放纵日，估算盈余共 {fmtKcal(summary.estimatedTotal)} 千卡
+            {summary.offsetDays != null &&
+              `，约抵掉 ${fmtMacro(summary.offsetDays)} 天的缺口`}
+          </div>
+        )}
       </div>
 
       {/* 图例：颜色之外还有方向（基线上下）区分缺口与盈余 */}
@@ -121,6 +133,14 @@ export default function EnergyBalanceCard({ data, summary }: EnergyBalanceCardPr
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-[3px] bg-surplus" />盈余 ↑
         </span>
+        {summary.estimatedDays > 0 && (
+          <span className="flex items-center gap-1.5">
+            <svg width="10" height="10" aria-hidden="true">
+              <rect width="10" height="10" rx="3" fill="url(#cheatHatch)" stroke={SURPLUS} strokeWidth="1" />
+            </svg>
+            放纵日
+          </span>
+        )}
         <span className="flex items-center gap-1.5">
           <span className="h-[2px] w-4 rounded-full bg-ink" />7 日均值
         </span>
@@ -128,6 +148,13 @@ export default function EnergyBalanceCard({ data, summary }: EnergyBalanceCardPr
 
       <ResponsiveContainer width="100%" height={220}>
         <ComposedChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }} barCategoryGap={dense ? 1 : 2}>
+          {/* 放纵日是估算值：用斜纹柱与记录值区分 */}
+          <defs>
+            <pattern id="cheatHatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="5" height="5" fill={SURPLUS} fillOpacity="0.18" />
+              <line x1="0" y1="0" x2="0" y2="5" stroke={SURPLUS} strokeWidth="2.5" />
+            </pattern>
+          </defs>
           <CartesianGrid vertical={false} stroke="rgba(70, 88, 61, 0.1)" strokeDasharray="3 5" />
           <XAxis
             dataKey="date"
@@ -151,7 +178,10 @@ export default function EnergyBalanceCard({ data, summary }: EnergyBalanceCardPr
           <ReferenceLine y={0} stroke={TICK_INK} strokeOpacity={0.5} />
           <Bar dataKey="balance" maxBarSize={14} radius={dense ? [1.5, 1.5, 0, 0] : [4, 4, 0, 0]} animationDuration={700} animationEasing="ease-out">
             {data.map((p) => (
-              <Cell key={p.date} fill={p.balance != null && p.balance > 0 ? SURPLUS : DEFICIT} />
+              <Cell
+                key={p.date}
+                fill={p.estimated ? 'url(#cheatHatch)' : p.balance != null && p.balance > 0 ? SURPLUS : DEFICIT}
+              />
             ))}
           </Bar>
           <Line
@@ -167,7 +197,7 @@ export default function EnergyBalanceCard({ data, summary }: EnergyBalanceCardPr
       </ResponsiveContainer>
 
       <p className="mt-2 px-3 text-[11px] leading-4 text-ink-2">
-        收支 = 当日摄入 − 总消耗。只统计已结束、且同时记录了饮食和总消耗的日子，缺记录的日子留空
+        收支 = 当日摄入 − 总消耗。只统计已结束、且同时记录了饮食和总消耗的日子，缺记录的日子留空；放纵日按估算盈余计入
       </p>
     </section>
   )

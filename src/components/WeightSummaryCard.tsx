@@ -1,10 +1,12 @@
 import AnimatedNumber from '@/components/motion/AnimatedNumber'
 import { formatDisplay } from '@/lib/date'
-import type { CutPace, RateSummary } from '@/lib/cut'
+import { CHEAT_WATER_DAYS, type CutPace, type RateSummary } from '@/lib/cut'
 
 interface WeightSummaryCardProps {
   summary: RateSummary
   pace: CutPace
+  /** 最新称重前几天内有放纵日：体重可能还带着水分 */
+  recentCheat?: boolean
 }
 
 function signed(value: number, digits: number): string {
@@ -47,7 +49,7 @@ const PACE: Record<Exclude<CutPace, 'unknown'>, { label: string; text: string; t
 }
 
 /** 7 日均重为主、最新一次称重为辅，并按每周变化率判断减脂节奏。 */
-export default function WeightSummaryCard({ summary, pace }: WeightSummaryCardProps) {
+export default function WeightSummaryCard({ summary, pace, recentCheat }: WeightSummaryCardProps) {
   const info = pace === 'unknown' ? null : PACE[pace]
   const tone = info?.tone ?? 'text-ink'
   return (
@@ -97,6 +99,11 @@ export default function WeightSummaryCard({ summary, pace }: WeightSummaryCardPr
         {info
           ? info.text
           : `近 ${summary.windowDays} 天至少称重 4 次、首末相隔满 7 天，才能估算减脂节奏`}
+        {recentCheat && (
+          <div className="mt-1 text-surplus">
+            近 {CHEAT_WATER_DAYS} 天有放纵日，体重可能还带着水分，过几天再看节奏
+          </div>
+        )}
       </div>
     </section>
   )

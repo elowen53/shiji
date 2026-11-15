@@ -10,6 +10,8 @@ export interface DailyRow {
   weight_kg: number | null
   waist_cm: number | null
   burn_kcal: number | null
+  /** Cheat day: estimated surplus over burn; null on ordinary days. */
+  cheat_surplus_kcal: number | null
 }
 
 export interface EntryRow {
