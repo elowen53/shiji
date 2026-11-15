@@ -5,14 +5,24 @@ import BrandMasthead from '@/components/BrandMasthead'
 import EnergyBalanceCard from '@/components/EnergyBalanceCard'
 import ExportSheet from '@/components/ExportSheet'
 import AnimatedGroup from '@/components/motion/AnimatedGroup'
-import LatestStatCard from '@/components/LatestStatCard'
+import ProteinAdherenceCard from '@/components/ProteinAdherenceCard'
 import TrendChartCard from '@/components/TrendChartCard'
+import WaistSummaryCard from '@/components/WaistSummaryCard'
 import WeightSummaryCard from '@/components/WeightSummaryCard'
 import WeightVsEnergyCard from '@/components/WeightVsEnergyCard'
 import { useEnergyBalance } from '@/hooks/useEnergyBalance'
+import { useMacroTargets } from '@/hooks/useMacroTargets'
 import { useMetricTrend } from '@/hooks/useMetricTrend'
-import { addDays, formatDisplay, todayKey } from '@/lib/date'
-import { getWeeklyTrendSummary, withMovingAverage, type TrendPoint } from '@/lib/trend'
+import {
+  WAIST_RATE,
+  WEIGHT_RATE,
+  assessComposition,
+  assessCutPace,
+  summarizeProtein,
+  summarizeRate,
+} from '@/lib/cut'
+import { addDays, todayKey } from '@/lib/date'
+import { withMovingAverage, type TrendPoint } from '@/lib/trend'
 import { buildExpectedVsActual, summarizeBalances, toBalanceChart } from '@/lib/energy'
 
 type RangeKey = '30d' | '90d' | 'all'
@@ -22,18 +32,6 @@ const RANGES: { key: RangeKey; label: string; days: number | null }[] = [
   { key: '90d', label: '90天', days: 90 },
   { key: 'all', label: '全部', days: null },
 ]
-
-/** 最新值与较上次差值 */
-function latestDelta(points: TrendPoint[]): { value: number; date: string; delta: number | null } | null {
-  const latest = points.length > 0 ? points[points.length - 1] : undefined
-  const prev = points.length > 1 ? points[points.length - 2] : undefined
-  if (!latest) return null
-  return {
-    value: latest.value,
-    date: latest.date,
-    delta: prev ? Math.round((latest.value - prev.value) * 10) / 10 : null,
-  }
-}
 
 /** 前端按区间过滤（均线先在全量序列上计算，切换分段不重复请求）。 */
 function filterByRange(points: TrendPoint[], days: number | null) {
@@ -47,6 +45,7 @@ export default function TrendsPage() {
   const weight = useMetricTrend('weight_kg')
   const waist = useMetricTrend('waist_cm')
   const energy = useEnergyBalance()
+  const { targets } = useMacroTargets()
   const [range, setRange] = useState<RangeKey>('30d')
   const [exportOpen, setExportOpen] = useState(false)
 
@@ -55,9 +54,19 @@ export default function TrendsPage() {
   const weightData = useMemo(() => filterByRange(weight.points, days), [weight.points, days])
   const waistData = useMemo(() => filterByRange(waist.points, days), [waist.points, days])
 
-  const weightStat = latestDelta(weight.points)
-  const waistStat = latestDelta(waist.points)
-  const weightWeekly = useMemo(() => getWeeklyTrendSummary(weight.points), [weight.points])
+  const weightRate = useMemo(() => summarizeRate(weight.points, WEIGHT_RATE), [weight.points])
+  const waistRate = useMemo(() => summarizeRate(waist.points, WAIST_RATE), [waist.points])
+  const pace = assessCutPace(weightRate?.percentPerWeek ?? null)
+  const composition = assessComposition(weightRate?.percentPerWeek ?? null, waistRate?.perWeek ?? null)
+
+  const proteinFactor = targets?.protein_g_per_kg ?? null
+  const [proteinWeek, proteinMonth] = useMemo(
+    () =>
+      [7, 30].map((n) =>
+        summarizeProtein(energy.proteinByDate, weight.points, proteinFactor, todayKey(), n),
+      ),
+    [energy.proteinByDate, weight.points, proteinFactor],
+  )
 
   /** 热量均线先用完整历史计算再过滤显示；区间汇总仍只统计所选日期内的完整日。 */
   const cutoff = days == null ? null : addDays(todayKey(), -(days - 1))
@@ -79,7 +88,10 @@ export default function TrendsPage() {
   const loading = weight.loading || waist.loading || energy.loading
   const error = weight.error ?? waist.error ?? energy.error
   const bothEmpty =
-    weight.points.length === 0 && waist.points.length === 0 && energy.balances.length === 0
+    weight.points.length === 0 &&
+    waist.points.length === 0 &&
+    energy.balances.length === 0 &&
+    energy.proteinByDate.size === 0
 
   const retry = () => {
     void weight.refresh()
@@ -137,22 +149,10 @@ export default function TrendsPage() {
             </div>
           ) : (
             <AnimatedGroup>
-              {/* 最新值大卡（体重 / 腰围） */}
-              {weightStat && weightWeekly && (
-                <WeightSummaryCard
-                  value={weightStat.value}
-                  dateLabel={`${formatDisplay(weightStat.date)} 记录`}
-                  weekly={weightWeekly}
-                />
-              )}
-              {waistStat && (
-                <LatestStatCard
-                  value={waistStat.value}
-                  unit="cm"
-                  dateLabel={`${formatDisplay(waistStat.date)} 记录`}
-                  delta={waistStat.delta}
-                />
-              )}
+              {/* 减脂进度：体重节奏、腰围对照、蛋白质达标 */}
+              {weightRate && <WeightSummaryCard summary={weightRate} pace={pace} />}
+              {waistRate && <WaistSummaryCard summary={waistRate} signal={composition} />}
+              <ProteinAdherenceCard week={proteinWeek} month={proteinMonth} />
 
               {/* 区间分段控件：联动两张图 */}
               <div className="mb-5 flex rounded-full border border-brand/10 bg-fill/60 p-1">

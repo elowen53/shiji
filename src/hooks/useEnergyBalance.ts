@@ -6,6 +6,8 @@ import { buildDailyBalances, type DailyBalance } from '@/lib/energy'
 export interface EnergyBalanceApi {
   /** 全部完整日（既有饮食又有消耗、且已结束），按日期升序 */
   balances: DailyBalance[]
+  /** 有饮食记录的日子 → 当日蛋白质总量（g） */
+  proteinByDate: Map<string, number>
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
@@ -26,9 +28,10 @@ async function fetchAll<T>(
   }
 }
 
-/** 每日热量收支：汇总 entries 的摄入与 daily_metrics 的总消耗 */
+/** 每日热量收支：汇总 entries 的摄入与 daily_metrics 的总消耗；顺带汇总每日蛋白质 */
 export function useEnergyBalance(): EnergyBalanceApi {
   const [balances, setBalances] = useState<DailyBalance[]>([])
+  const [proteinByDate, setProteinByDate] = useState<Map<string, number>>(() => new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,10 +42,10 @@ export function useEnergyBalance(): EnergyBalanceApi {
     setError(null)
     try {
       const [entries, burns] = await Promise.all([
-        fetchAll<{ entry_date: string; kcal: number }>((from, to) =>
+        fetchAll<{ entry_date: string; kcal: number; protein: number }>((from, to) =>
           db
             .from('entries')
-            .select('entry_date, kcal')
+            .select('entry_date, kcal, protein')
             .order('entry_date', { ascending: true })
             .order('id', { ascending: true })
             .range(from, to),
@@ -57,11 +60,14 @@ export function useEnergyBalance(): EnergyBalanceApi {
         ),
       ])
       const intake = new Map<string, number>()
+      const protein = new Map<string, number>()
       for (const e of entries) {
         intake.set(e.entry_date, (intake.get(e.entry_date) ?? 0) + Number(e.kcal))
+        protein.set(e.entry_date, (protein.get(e.entry_date) ?? 0) + Number(e.protein))
       }
       const burn = new Map(burns.map((m) => [m.entry_date, Number(m.burn_kcal)]))
       setBalances(buildDailyBalances(intake, burn, todayKey()))
+      setProteinByDate(protein)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }
@@ -72,5 +78,5 @@ export function useEnergyBalance(): EnergyBalanceApi {
     void refresh()
   }, [refresh])
 
-  return { balances, loading, error, refresh }
+  return { balances, proteinByDate, loading, error, refresh }
 }
