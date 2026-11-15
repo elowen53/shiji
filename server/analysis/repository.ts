@@ -47,12 +47,14 @@ export const DAILY_SQL = `
       sum(fat)::float8 as fat, sum(carbs)::float8 as carbs
     from public.entries where entry_date between $1::date and $2::date group by entry_date
   ), metrics as (
-    select entry_date, weight_kg::float8, waist_cm::float8, burn_kcal::float8
-    from public.daily_metrics where entry_date between $1::date and $2::date
+    -- to_jsonb keeps this query valid on databases that have not run the cheat-day migration yet.
+    select entry_date, weight_kg::float8, waist_cm::float8, burn_kcal::float8,
+      (to_jsonb(d) ->> 'cheat_surplus_kcal')::float8 as cheat_surplus_kcal
+    from public.daily_metrics d where entry_date between $1::date and $2::date
   )
   select coalesce(i.entry_date, m.entry_date)::text as entry_date,
     coalesce(i.entry_count, 0)::int as entry_count,
-    i.kcal, i.protein, i.fat, i.carbs, m.weight_kg, m.waist_cm, m.burn_kcal
+    i.kcal, i.protein, i.fat, i.carbs, m.weight_kg, m.waist_cm, m.burn_kcal, m.cheat_surplus_kcal
   from intake i full outer join metrics m using (entry_date)
   order by coalesce(i.entry_date, m.entry_date)`
 

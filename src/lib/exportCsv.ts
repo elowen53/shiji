@@ -28,7 +28,10 @@ export interface DailySummaryDay {
   weightKg: number | null
   waistCm: number | null
   burnKcal: number | null
+  /** 摄入 − 总消耗；放纵日为估算盈余 */
   netKcal: number | null
+  /** 放纵日的估算盈余；普通日为 null */
+  cheatSurplusKcal: number | null
 }
 
 /** 按天聚合 entries，join daily_metrics；只保留有数据的日期，升序 */
@@ -49,7 +52,9 @@ export function summarizeDays(entries: Entry[], metrics: DailyMetric[]): DailySu
   for (const date of dates) {
     const agg = intake.get(date)
     const m = metricByDate.get(date)
-    const hasMetric = m != null && (m.weight_kg != null || m.waist_cm != null || m.burn_kcal != null)
+    const cheat = m?.cheat_surplus_kcal ?? null
+    const hasMetric =
+      m != null && (m.weight_kg != null || m.waist_cm != null || m.burn_kcal != null || cheat != null)
     if (!agg && !hasMetric) continue // 该日期无任何数据（如被清除过）
     const burn = m?.burn_kcal ?? null
     days.push({
@@ -61,7 +66,8 @@ export function summarizeDays(entries: Entry[], metrics: DailyMetric[]): DailySu
       weightKg: m?.weight_kg ?? null,
       waistCm: m?.waist_cm ?? null,
       burnKcal: burn,
-      netKcal: agg != null && burn != null ? agg.kcal - burn : null,
+      netKcal: cheat != null ? Number(cheat) : agg != null && burn != null ? agg.kcal - burn : null,
+      cheatSurplusKcal: cheat != null ? Number(cheat) : null,
     })
   }
   return days
@@ -79,6 +85,7 @@ export function buildDailySummaryCsv(entries: Entry[], metrics: DailyMetric[]): 
     '腰围(cm)',
     '总消耗(千卡)',
     '净摄入(千卡)',
+    '放纵日估算盈余(千卡)',
   ]
   const rows = summarizeDays(entries, metrics).map((d) => [
     d.date,
@@ -90,6 +97,7 @@ export function buildDailySummaryCsv(entries: Entry[], metrics: DailyMetric[]): 
     num(d.waistCm),
     num(d.burnKcal),
     num(d.netKcal),
+    num(d.cheatSurplusKcal),
   ])
   return toCsv([header, ...rows])
 }

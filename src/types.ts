@@ -53,6 +53,8 @@ export interface DailyMetric {
   weight_kg: number | null
   waist_cm: number | null
   burn_kcal: number | null
+  /** 放纵日：估算的热量盈余（千卡，相对总消耗）；null / 缺省表示普通日 */
+  cheat_surplus_kcal?: number | null
   updated_at?: string
 }
 
@@ -61,6 +63,7 @@ export interface MetricInput {
   weight_kg: number | null
   waist_cm: number | null
   burn_kcal: number | null
+  cheat_surplus_kcal: number | null
 }
 
 /** 三大营养素目标系数（克 / 公斤体重）；null 表示未设置该项目标 */

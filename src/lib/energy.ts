@@ -6,13 +6,24 @@ import type { TrendChartPoint } from './trend.js'
 /** 1 kg 体重约等于 7700 千卡（常用近似） */
 export const KCAL_PER_KG = 7700
 
-/** 一个「完整日」：当天既有饮食记录又有总消耗，且已经过去 */
+/** 放纵日的估算盈余档位（千卡，相对当天总消耗）；默认取中档 */
+export const CHEAT_SURPLUS_LEVELS = [500, 1000, 1500] as const
+export const DEFAULT_CHEAT_SURPLUS = 1000
+
+/**
+ * 计入收支的一天：已经过去，且要么既有饮食记录又有总消耗（完整日），
+ * 要么被标记为放纵日（没法记录热量，收支直接取估算盈余）。
+ */
 export interface DailyBalance {
   date: string
-  intake: number
-  burn: number
+  /** 放纵日的摄入未知，为 null */
+  intake: number | null
+  /** 放纵日可以没有总消耗记录 */
+  burn: number | null
   /** 摄入 − 消耗；负数为缺口，正数为盈余 */
   balance: number
+  /** true：放纵日，balance 是估算盈余而不是记录值 */
+  estimated: boolean
 }
 
 /** 柱状图数据：按日历日连续，缺数据的日子 balance 为 null（留空而不是当作 0） */
@@ -21,17 +32,27 @@ export interface BalanceChartPoint {
   balance: number | null
   intake: number | null
   burn: number | null
-  /** 7 个日历日内完整日的平均收支；窗口内不足 3 个完整日为 null */
+  /** 放纵日：balance 为估算盈余 */
+  estimated: boolean
+  /** 7 个日历日内已计入日子的平均收支；窗口内不足 3 天为 null */
   ma: number | null
 }
 
 export interface BalanceSummary {
-  /** 区间内完整日数 */
+  /** 区间内计入的天数（完整日 + 放纵日） */
   days: number
   /** 区间日历天数（从区间起点或首个完整日到最后一个完整日） */
   span: number
   avg: number
   total: number
+  /** 其中放纵日的天数与估算盈余合计 */
+  estimatedDays: number
+  estimatedTotal: number
+  /**
+   * 放纵日的估算盈余大约抵掉了多少个记录日的缺口；
+   * 没有放纵日、或记录日平均没有缺口时为 null
+   */
+  offsetDays: number | null
 }
 
 export interface ExpectedActualPoint {
@@ -50,8 +71,10 @@ export interface ExpectedActualResult {
   actual: number
   /** 起点到最后一次称重的天数 */
   span: number
-  /** 这段时间内完整日占比（0–1） */
+  /** 这段时间内计入收支的日子占比（0–1） */
   coverage: number
+  /** 这段时间内的放纵日天数（其收支为估算值） */
+  estimatedDays: number
 }
 
 const daysBetween = (from: string, to: string) => {
@@ -63,22 +86,30 @@ const daysBetween = (from: string, to: string) => {
 /**
  * 合并每日摄入与消耗，只保留两者都有、且早于 today 的日子。
  * 当天尚未结束，摄入不完整，不参与统计。
+ *
+ * 放纵日（cheatByDate：日期 → 估算盈余）不看当天记了什么：聚餐没法记，零星记下的几条只会
+ * 算出一个假缺口。收支直接取估算盈余（等价于「摄入 = 总消耗 + 盈余」），所以不要求有总消耗。
  */
 export function buildDailyBalances(
   intakeByDate: Map<string, number>,
   burnByDate: Map<string, number>,
   today: string,
+  cheatByDate: Map<string, number> = new Map(),
 ): DailyBalance[] {
   const out: DailyBalance[] = []
+  for (const [date, surplus] of cheatByDate) {
+    if (date >= today) continue
+    out.push({ date, intake: null, burn: burnByDate.get(date) ?? null, balance: surplus, estimated: true })
+  }
   for (const [date, burn] of burnByDate) {
     const intake = intakeByDate.get(date)
-    if (intake == null || date >= today) continue
-    out.push({ date, intake, burn, balance: intake - burn })
+    if (intake == null || date >= today || cheatByDate.has(date)) continue
+    out.push({ date, intake, burn, balance: intake - burn, estimated: false })
   }
   return out.sort((a, b) => a.date.localeCompare(b.date))
 }
 
-/** 按日历日展开为图表数据，附 7 日平均（窗口内完整日 ≥ 3 才计算） */
+/** 按日历日展开为图表数据，附 7 日平均（窗口内计入的日子 ≥ 3 才计算） */
 export function toBalanceChart(balances: DailyBalance[]): BalanceChartPoint[] {
   if (balances.length === 0) return []
   const byDate = new Map(balances.map((b) => [b.date, b]))
@@ -93,6 +124,7 @@ export function toBalanceChart(balances: DailyBalance[]): BalanceChartPoint[] {
       balance: b?.balance ?? null,
       intake: b?.intake ?? null,
       burn: b?.burn ?? null,
+      estimated: b?.estimated ?? false,
       ma:
         window.length >= 3
           ? Math.round(window.reduce((s, x) => s + x.balance, 0) / window.length)
@@ -105,11 +137,18 @@ export function toBalanceChart(balances: DailyBalance[]): BalanceChartPoint[] {
 export function summarizeBalances(balances: DailyBalance[]): BalanceSummary | null {
   if (balances.length === 0) return null
   const total = balances.reduce((s, b) => s + b.balance, 0)
+  const estimated = balances.filter((b) => b.estimated)
+  const estimatedTotal = estimated.reduce((s, b) => s + b.balance, 0)
+  const tracked = balances.length - estimated.length
+  const trackedAvg = tracked > 0 ? (total - estimatedTotal) / tracked : 0
   return {
     days: balances.length,
     span: daysBetween(balances[0].date, balances[balances.length - 1].date) + 1,
     avg: total / balances.length,
     total,
+    estimatedDays: estimated.length,
+    estimatedTotal,
+    offsetDays: estimated.length > 0 && trackedAvg < 0 ? estimatedTotal / -trackedAvg : null,
   }
 }
 
@@ -119,7 +158,7 @@ export function summarizeBalances(balances: DailyBalance[]): BalanceSummary | nu
  * 某天早上的体重反映的是前一天及之前的收支，所以称重日 d 的「预期体重」= 截至 d 前一天的累计收支 ÷ 7700。
  * 7 日均重是滞后的平均值（窗口内点数不同，滞后也不同），因此预期值也按同一窗口、同一批称重日取平均，
  * 两条线才可比：若体重完全按 7700 规则变化，两者会重合。
- * 缺记录的日子不计入累计（会让预期偏小，用 coverage 提示）。
+ * 缺记录的日子不计入累计（会让预期偏小，用 coverage 提示）；放纵日按估算盈余计入。
  */
 export function buildExpectedVsActual(
   balances: DailyBalance[],
@@ -155,7 +194,8 @@ export function buildExpectedVsActual(
   }))
 
   const span = daysBetween(base.date, last.date)
-  const covered = balances.filter((b) => b.date >= base.date && b.date < last.date).length
+  const inSpan = balances.filter((b) => b.date >= base.date && b.date < last.date)
+  const covered = inSpan.length
   const end = points[points.length - 1]
   return {
     points,
@@ -163,5 +203,6 @@ export function buildExpectedVsActual(
     actual: end.actual,
     span,
     coverage: span > 0 ? covered / span : 0,
+    estimatedDays: inSpan.filter((b) => b.estimated).length,
   }
 }

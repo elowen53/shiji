@@ -55,7 +55,9 @@ function insight(r: ExpectedActualResult): string {
   if (Math.abs(gap) < 0.3) return '实际变化与预期基本吻合，记录的摄入和消耗比较可信'
   const perDay = fmtKcal((Math.abs(gap) * KCAL_PER_KG) / r.span)
   return gap > 0
-    ? `实际比预期重 ${fmtMacro(Math.abs(gap))} kg，相当于每天约 ${perDay} 千卡没被算进去：常见原因是手表高估了消耗，或有饮食漏记`
+    ? `实际比预期重 ${fmtMacro(Math.abs(gap))} kg，相当于每天约 ${perDay} 千卡没被算进去：常见原因是手表高估了消耗，或有饮食漏记${
+        r.estimatedDays > 0 ? '，也可能是放纵日实际吃得比估算多' : ''
+      }`
     : `实际比预期轻 ${fmtMacro(Math.abs(gap))} kg，相当于每天约 ${perDay} 千卡：可能是消耗被低估、份量记多了，或近期水分下降`
 }
 
@@ -176,6 +178,7 @@ export default function WeightVsEnergyCard({ result }: WeightVsEnergyCardProps) 
       <p className="mx-3 mt-2 rounded-xl bg-grouped px-3 py-2 text-[12px] leading-5 text-ink">{insight(result)}</p>
       <p className="mt-2 px-3 text-[11px] leading-4 text-ink-2">
         预期 = 累计收支 ÷ {KCAL_PER_KG.toLocaleString('en-US')} 千卡/kg，实际 = 7 日均重，两者都按 7 日平均、从起点算变化。两者长期的差距比单日波动更有参考价值
+        {result.estimatedDays > 0 && `。预期中含 ${result.estimatedDays} 个放纵日的估算盈余`}
       </p>
     </section>
   )

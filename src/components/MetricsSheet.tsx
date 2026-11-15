@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import BottomSheet from '@/components/BottomSheet'
 import { formatDisplay } from '@/lib/date'
+import { CHEAT_SURPLUS_LEVELS, DEFAULT_CHEAT_SURPLUS } from '@/lib/energy'
 import type { DailyMetric, MetricInput } from '@/types'
 
 interface MetricsSheetProps {
@@ -13,16 +14,20 @@ interface MetricsSheetProps {
   onSave: (input: MetricInput) => Promise<boolean>
 }
 
+const CHEAT_LABELS: Record<number, string> = { 500: '小超', 1000: '明显', 1500: '大吃' }
+
 const parseOrNull = (s: string): number | null => {
   const v = parseFloat(s)
   return Number.isFinite(v) && v >= 0 ? Math.round(v * 100) / 100 : null
 }
 
-/** 每日指标录入：体重（kg）、腰围（cm）与总消耗（千卡），允许只填部分项 */
+/** 每日指标录入：体重（kg）、腰围（cm）、总消耗（千卡）与放纵日标记，允许只填部分项 */
 export default function MetricsSheet({ open, entryDate, metric, onClose, onSave }: MetricsSheetProps) {
   const [weight, setWeight] = useState('')
   const [waist, setWaist] = useState('')
   const [burn, setBurn] = useState('')
+  /** 放纵日估算盈余；null 表示普通日 */
+  const [cheat, setCheat] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -30,14 +35,19 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
       setWeight(metric?.weight_kg != null ? String(metric.weight_kg) : '')
       setWaist(metric?.waist_cm != null ? String(metric.waist_cm) : '')
       setBurn(metric?.burn_kcal != null ? String(metric.burn_kcal) : '')
+      setCheat(metric?.cheat_surplus_kcal != null ? Number(metric.cheat_surplus_kcal) : null)
       setSaving(false)
     }
   }, [open, metric])
 
-  const hasAnyValue = weight.trim() !== '' || waist.trim() !== '' || burn.trim() !== ''
+  const hasAnyValue =
+    weight.trim() !== '' || waist.trim() !== '' || burn.trim() !== '' || cheat != null
   const hasExisting =
     metric != null &&
-    (metric.weight_kg != null || metric.waist_cm != null || metric.burn_kcal != null)
+    (metric.weight_kg != null ||
+      metric.waist_cm != null ||
+      metric.burn_kcal != null ||
+      metric.cheat_surplus_kcal != null)
 
   const handleSave = async () => {
     if (saving) return
@@ -46,6 +56,7 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
       weight_kg: parseOrNull(weight),
       waist_cm: parseOrNull(waist),
       burn_kcal: parseOrNull(burn),
+      cheat_surplus_kcal: cheat,
     })
     setSaving(false)
     if (ok) onClose()
@@ -54,7 +65,12 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
   const handleClear = async () => {
     if (saving) return
     setSaving(true)
-    const ok = await onSave({ weight_kg: null, waist_cm: null, burn_kcal: null })
+    const ok = await onSave({
+      weight_kg: null,
+      waist_cm: null,
+      burn_kcal: null,
+      cheat_surplus_kcal: null,
+    })
     setSaving(false)
     if (ok) onClose()
   }
@@ -77,7 +93,7 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
       </div>
 
       <div className="no-scrollbar min-h-0 overflow-y-auto px-4 pb-4">
-        <div className="ios-card mb-6">
+        <div className="ios-card mb-4">
           <div className="ios-row gap-3">
             <div className="flex-1 text-[16px] text-ink">体重（kg）</div>
             <input
@@ -122,6 +138,61 @@ export default function MetricsSheet({ open, entryDate, metric, onClose, onSave 
             />
           </div>
         </div>
+
+        <div className="ios-card mb-2">
+          <div className="ios-row gap-3">
+            <div className="flex-1 text-[16px] text-ink">放纵日</div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={cheat != null}
+              aria-label="放纵日"
+              onClick={() => setCheat(cheat == null ? DEFAULT_CHEAT_SURPLUS : null)}
+              className={`relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors ${
+                cheat != null ? 'bg-brand' : 'bg-fill-press'
+              }`}
+            >
+              <span
+                className={`absolute left-[2px] top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow transition-transform ${
+                  cheat != null ? 'translate-x-5' : ''
+                }`}
+              />
+            </button>
+          </div>
+          {cheat != null && (
+            <>
+              <div className="ios-separator" />
+              <div className="px-4 py-3">
+                <div className="mb-2 text-[13px] text-ink-2">估算比总消耗多吃了</div>
+                <div className="flex gap-2" role="radiogroup" aria-label="估算盈余">
+                  {CHEAT_SURPLUS_LEVELS.map((level) => {
+                    const selected = cheat === level
+                    return (
+                      <button
+                        key={level}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setCheat(level)}
+                        className={`tnum flex-1 rounded-xl py-2 text-center ${
+                          selected ? 'bg-brand text-white' : 'bg-fill text-ink'
+                        }`}
+                      >
+                        <div className="text-[15px] font-semibold">+{level.toLocaleString('en-US')}</div>
+                        <div className={`text-[11px] ${selected ? 'text-white/80' : 'text-ink-2'}`}>
+                          {CHEAT_LABELS[level]}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        <p className="mb-6 px-1 text-[12px] leading-5 text-ink-2">
+          聚餐、社交没法记录热量时打开。这天按估算盈余计入热量收支，已记的食物不参与计算，也不计入蛋白质达标。
+        </p>
 
         <button
           type="button"

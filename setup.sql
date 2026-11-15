@@ -36,7 +36,7 @@ alter table entries enable row level security;
 
 create index if not exists entries_entry_date_idx on entries(entry_date);
 
--- 每日指标表：一天一行，记录体重、腰围与总消耗（均可空）
+-- 每日指标表：一天一行，记录体重、腰围、总消耗与放纵日标记（均可空）
 create table if not exists daily_metrics (
   entry_date date primary key,
   weight_kg numeric,
@@ -47,6 +47,10 @@ create table if not exists daily_metrics (
 
 -- 旧环境升级用（幂等）：已存在 daily_metrics 但缺少 waist_cm 列时执行补齐
 alter table daily_metrics add column if not exists waist_cm numeric;
+
+-- 放纵日：聚餐等没法记录热量的日子，保存估算的热量盈余（千卡，相对当天总消耗）；空值为普通日
+alter table daily_metrics add column if not exists cheat_surplus_kcal numeric
+  check (cheat_surplus_kcal > 0);
 
 alter table daily_metrics enable row level security;
 

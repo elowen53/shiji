@@ -181,14 +181,14 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
   }
 
   const handleSaveMetric = async (input: MetricInput) => {
-    const ok = await saveMetric(input)
+    const err = await saveMetric(input)
     const cleared =
-      input.weight_kg == null && input.waist_cm == null && input.burn_kcal == null
-    toast(
-      ok ? (cleared ? '已清除' : '已保存') : '保存失败，请检查网络',
-      ok ? 'success' : 'error',
-    )
-    return ok
+      input.weight_kg == null &&
+      input.waist_cm == null &&
+      input.burn_kcal == null &&
+      input.cheat_surplus_kcal == null
+    toast(err ?? (cleared ? '已清除' : '已保存'), err ? 'error' : 'success')
+    return err == null
   }
 
   return (
@@ -271,7 +271,7 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
                 {kcalGoal != null && (
                   <ProgressBar pct={kcalPct!} barClass="bg-brand" label="热量目标完成度" className="mt-3 h-2" />
                 )}
-                {(kcalGoal != null || metric?.burn_kcal != null) && (
+                {(kcalGoal != null || metric?.burn_kcal != null || metric?.cheat_surplus_kcal != null) && (
                   <div className="tnum mt-2 flex items-center justify-between gap-3 text-[12px] text-ink-2">
                     <span>
                       {kcalGoal == null
@@ -280,10 +280,14 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
                           ? <>还可摄入 <AnimatedNumber value={kcalGoal - totals.kcal} /> 千卡</>
                           : <>已超出 <AnimatedNumber value={totals.kcal - kcalGoal} /> 千卡</>}
                     </span>
-                    {metric?.burn_kcal != null && (
-                      <span>
-                        消耗 {fmtKcal(metric.burn_kcal)} · 净 {fmtKcal(totals.kcal - metric.burn_kcal)}
-                      </span>
+                    {metric?.cheat_surplus_kcal != null ? (
+                      <span>放纵日 · 按盈余 {fmtKcal(Number(metric.cheat_surplus_kcal))} 千卡估算</span>
+                    ) : (
+                      metric?.burn_kcal != null && (
+                        <span>
+                          消耗 {fmtKcal(metric.burn_kcal)} · 净 {fmtKcal(totals.kcal - metric.burn_kcal)}
+                        </span>
+                      )
                     )}
                   </div>
                 )}
@@ -339,6 +343,11 @@ export default function DiaryPage({ foods }: DiaryPageProps) {
                     <Scale size={18} className="text-success" />
                   </div>
                   <div className="min-w-0 flex-1 text-[14px] font-medium text-ink">今日指标</div>
+                  {metric?.cheat_surplus_kcal != null && (
+                    <span className="tnum shrink-0 rounded-full bg-surplus/10 px-2.5 py-1 text-[12px] font-medium text-surplus">
+                      放纵日 · 估算 +{fmtKcal(Number(metric.cheat_surplus_kcal))}
+                    </span>
+                  )}
                   <ChevronRight size={16} className="shrink-0 text-ink-3" />
                 </div>
                 <div className="mt-3 flex">

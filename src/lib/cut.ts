@@ -115,6 +115,21 @@ export function assessComposition(
   return waistDown ? 'recomp' : 'stalled'
 }
 
+/** 放纵日之后体重里可能还带着水分的天数 */
+export const CHEAT_WATER_DAYS = 3
+
+/**
+ * 最新一次称重是否还受放纵日影响：称重前 CHEAT_WATER_DAYS 天内有放纵日。
+ * 晨起称重反映的是前一天及之前的饮食，所以称重当天的放纵日不算。
+ */
+export function hasRecentCheat(cheatDates: Iterable<string>, latestWeighDate: string): boolean {
+  const from = addDays(latestWeighDate, -CHEAT_WATER_DAYS)
+  for (const date of cheatDates) {
+    if (date >= from && date < latestWeighDate) return true
+  }
+  return false
+}
+
 /** 摄入达到目标的 90% 记为达标 */
 export const PROTEIN_HIT_RATIO = 0.9
 
