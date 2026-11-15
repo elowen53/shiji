@@ -8,7 +8,7 @@
 
 ## 功能
 
-- **每日饮食记录**：不分餐次，从食物库选择食物 + 填写数量（支持 0.1 起步进）；外食等偶尔吃一次的食物可「临时记录」，只记入当天不进食物库；自动累加当日总热量与蛋白质 / 脂肪 / 碳水
+- **每日饮食记录**：不分餐次，从食物库选择食物 + 填写数量（支持 0.1 起步进）；同一天重复添加同一种食物且单位相同时，合并为一条，数量与营养快照累加（如 2 个鸡蛋 + 3 个鸡蛋 = 5 个）；外食等偶尔吃一次的食物可「临时记录」，只记入当天不进食物库，保持独立；自动累加当日总热量与蛋白质 / 脂肪 / 碳水
 - **食物库自维护**：食物名称、自定义单位（100g / 1份 / 1碗…）、每单位三大营养素含量均由自己维护；**热量按 `蛋白质×4 + 脂肪×9 + 碳水×4`（千卡/克）自动计算**
 - **每日指标**：记录每日体重（kg）、腰围（cm）与总消耗（千卡），自动显示净摄入（总摄入 − 总消耗）
 - **热量收支**：趋势页按日展示热量缺口 / 盈余（摄入 − 总消耗，只统计饮食与消耗都记录了的已结束日子）与 7 日均值；并将按热量推算的预期体重变化（÷ 7700 千卡/kg）与 7 日均重的实际变化对照，估算记录偏差
@@ -50,7 +50,7 @@ VITE_SUPABASE_ANON_KEY=你的 publishable key
 
 两种方式任选其一：
 
-1. **SQL Editor**：依次执行根目录的 `setup.sql`、`supabase/migrations/20261011_private_access.sql` 和 `supabase/migrations/20261014_analysis_reader.sql`（幂等，可重复执行；分析角色默认未启用登录）
+1. **SQL Editor**：依次执行根目录的 `setup.sql`、`supabase/migrations/20261011_private_access.sql`、`supabase/migrations/20261014_analysis_reader.sql` 和 `supabase/migrations/20261107130531_merge_food_entries.sql`（幂等，可重复执行；分析角色默认未启用登录）
 2. **脚本**：在 <https://supabase.com/dashboard/account/tokens> 生成 Personal Access Token 后运行：
 
 ```bash
@@ -81,6 +81,8 @@ SUPABASE_ACCESS_TOKEN=sbp_xxx VITE_SUPABASE_ANON_KEY=你的key node scripts/setu
 权限回归检查可运行 `npm run test:access`，通过本地环境变量提供 `SUPABASE_URL`、`SUPABASE_PUBLISHABLE_KEY` 和 `SHIJI_OWNER_PASSWORD`。它检查匿名访问被拒绝、专用账号可读取、退出后旧令牌失效；不会修改业务数据。不要把密码写入提交的文件。
 
 ## 部署
+
+升级已有环境时，先执行 `supabase/migrations/20261107130531_merge_food_entries.sql`，再部署前端。此迁移新增受现有 RLS 和账号会话检查保护的 `add_food_entry` RPC，事务内完成合并，避免同时添加时漏算。旧的重复条目会在下次向该组添加食物时合并，原有营养快照直接相加。可运行 `npm run test:entries` 验证保存、合并和权限回归。
 
 项目已关联 Vercel 项目 `shiji`。更新代码后：
 
